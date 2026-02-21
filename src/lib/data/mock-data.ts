@@ -208,7 +208,7 @@ export const siteConfig: SiteConfig = {
   },
   nav: {
     showLogin: true,
-    ctaText: "Get Started",
+    ctaText: "Sign up",
     ctaLink: "/login",
     links: [
       { label: "Business", href: "#business" },

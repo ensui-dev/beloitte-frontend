@@ -35,11 +35,11 @@ export function PublicLayout({ children, config }: PublicLayoutProps): React.Rea
                   href="/login"
                   className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  Sign in
+                  Log in
                 </a>
                 <Button asChild size="sm">
                   <a href={config?.nav.ctaLink ?? "/login"}>
-                    {config?.nav.ctaText ?? "Get Started"}
+                    {config?.nav.ctaText ?? "Sign up"}
                   </a>
                 </Button>
               </>

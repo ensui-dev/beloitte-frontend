@@ -78,7 +78,7 @@ export function ModuleEditorPanel({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="flex w-full flex-col sm:max-w-lg">
+      <SheetContent side="right" className="flex pl-4 pr-4 w-full flex-col sm:max-w-lg">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             {Icon && <Icon className="h-5 w-5 text-muted-foreground" />}
