@@ -12,8 +12,10 @@ import { z } from "zod";
 export const heroConfigSchema = z.object({
   headline: z.string().min(1).default("Welcome to Your Bank"),
   subheadline: z.string().default("Modern banking, simplified."),
-  ctaText: z.string().min(1).default("Get Started"),
+  ctaText: z.string().min(1).default("Get Started with Discord"),
   ctaLink: z.string().min(1).default("/login"),
+  secondaryCtaText: z.string().optional(),
+  secondaryCtaLink: z.string().optional(),
   showDashboardPreview: z.boolean().default(true),
   backgroundVariant: z
     .enum(["gradient", "image", "particles"])
@@ -161,7 +163,7 @@ export type AboutConfig = z.infer<typeof aboutConfigSchema>;
 export const ctaConfigSchema = z.object({
   heading: z.string().min(1).default("Ready to get started?"),
   description: z.string().optional(),
-  buttonText: z.string().min(1).default("Open an Account"),
+  buttonText: z.string().min(1).default("Get Started"),
   buttonLink: z.string().min(1).default("/login"),
   variant: z.enum(["banner", "card", "fullwidth"]).default("banner"),
 });

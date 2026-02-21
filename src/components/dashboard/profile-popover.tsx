@@ -3,11 +3,15 @@ import { useNavigate } from "react-router";
 import { useAuth, useSession, useIsAdmin } from "@/components/providers/auth-provider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { LogOut, ChevronsUpDown, Check } from "lucide-react";
 import type { UserRole } from "@/lib/data/types";
 
 function getInitials(name: string): string {
@@ -70,7 +74,7 @@ export function ProfilePopover(): React.ReactElement | null {
         align="end"
         className="w-64 border-white/[0.06] bg-popover/80 p-0 backdrop-blur-xl"
       >
-        {/* User info */}
+        {/* User info + inline role switcher */}
         <div className="flex items-center gap-3 p-4">
           <Avatar className="h-10 w-10">
             <AvatarImage src={user.discordAvatar} alt={user.discordUsername} />
@@ -78,41 +82,41 @@ export function ProfilePopover(): React.ReactElement | null {
               {getInitials(user.discordUsername)}
             </AvatarFallback>
           </Avatar>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium">{user.discordUsername}</div>
-            <div className="text-xs text-muted-foreground">{ROLE_LABELS[activeRole]}</div>
+            {isAdmin ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground">
+                    {ROLE_LABELS[activeRole]}
+                    <ChevronsUpDown className="h-3 w-3" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  className="w-48 border-white/[0.06] bg-popover/90 backdrop-blur-xl"
+                >
+                  <DropdownMenuItem
+                    onClick={() => handleRoleSwitch("player")}
+                    className="flex items-center justify-between"
+                  >
+                    Player
+                    {activeRole === "player" && <Check className="h-3.5 w-3.5 text-primary" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleRoleSwitch("admin")}
+                    className="flex items-center justify-between"
+                  >
+                    Administrator
+                    {activeRole === "admin" && <Check className="h-3.5 w-3.5 text-primary" />}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="text-xs text-muted-foreground">{ROLE_LABELS[activeRole]}</div>
+            )}
           </div>
         </div>
-
-        {/* Role switcher — only show if user has admin role */}
-        {isAdmin && (
-          <>
-            <Separator className="bg-white/[0.06]" />
-            <div className="p-4">
-              <div className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Switch role
-              </div>
-              <RadioGroup
-                value={activeRole}
-                onValueChange={(value: string) => handleRoleSwitch(value as UserRole)}
-                className="gap-2"
-              >
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="player" id="role-player" />
-                  <Label htmlFor="role-player" className="cursor-pointer text-sm">
-                    Player
-                  </Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="admin" id="role-admin" />
-                  <Label htmlFor="role-admin" className="cursor-pointer text-sm">
-                    Administrator
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-          </>
-        )}
 
         <Separator className="bg-white/[0.06]" />
 

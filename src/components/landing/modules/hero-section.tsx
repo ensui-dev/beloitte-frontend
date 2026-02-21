@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
 import type { HeroConfig } from "@/lib/config/site-config-schema";
 
 interface HeroSectionProps {
@@ -29,10 +30,18 @@ export function HeroSection({ config }: HeroSectionProps): React.ReactElement {
           <p className="text-lg text-muted-foreground md:text-xl">
             {config.subheadline}
           </p>
-          <div className={`flex gap-4 pt-2 ${isCenter ? "justify-center" : ""}`}>
+          <div className={`flex flex-wrap gap-3 pt-2 ${isCenter ? "justify-center" : ""}`}>
             <Button size="lg" asChild>
               <a href={config.ctaLink}>{config.ctaText}</a>
             </Button>
+            {config.secondaryCtaText && config.secondaryCtaLink && (
+              <Button size="lg" variant="outline" asChild className="group border-white/[0.08] bg-white/[0.03] backdrop-blur-sm">
+                <a href={config.secondaryCtaLink}>
+                  {config.secondaryCtaText}
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </a>
+              </Button>
+            )}
           </div>
         </div>
 

@@ -30,11 +30,19 @@ export function PublicLayout({ children, config }: PublicLayoutProps): React.Rea
             ))}
 
             {config?.nav.showLogin !== false && (
-              <Button asChild size="sm">
-                <a href={config?.nav.ctaLink ?? "/login"}>
-                  {config?.nav.ctaText ?? "Get Started"}
+              <>
+                <a
+                  href="/login"
+                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Sign in
                 </a>
-              </Button>
+                <Button asChild size="sm">
+                  <a href={config?.nav.ctaLink ?? "/login"}>
+                    {config?.nav.ctaText ?? "Get Started"}
+                  </a>
+                </Button>
+              </>
             )}
           </div>
         </nav>

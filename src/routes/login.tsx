@@ -1,9 +1,10 @@
 /**
  * Login page — Discord SSO is the only authentication method.
  *
- * This is intentionally simple: a centered card with a Discord login button.
- * No email/password forms, no other OAuth providers, no sign-up flow.
- * The button triggers a redirect to the backend's Discord OAuth endpoint.
+ * Unified flow: one "Continue with Discord" action handles both
+ * login (existing accounts) and registration (new accounts).
+ * The backend determines whether to create or retrieve an account
+ * based on the Discord identity — no separate sign-up form needed.
  *
  * In VITE_MOCK_MODE, a "Dev Login" button bypasses Discord entirely
  * and authenticates with the mock session data — no backend needed.
@@ -17,9 +18,8 @@ import { useSiteConfig } from "@/hooks/use-site-config";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { redirectToDiscordLogin } from "@/lib/auth/discord";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LogIn, Bug } from "lucide-react";
+import { LogIn, Bug, Shield, Zap } from "lucide-react";
 
 const IS_MOCK_MODE = import.meta.env.VITE_MOCK_MODE === "true";
 
@@ -61,38 +61,51 @@ export function LoginPage(): React.ReactElement {
   if (state.status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <Card className="w-full max-w-sm border-border/50">
-          <CardHeader className="text-center">
-            <Skeleton className="mx-auto h-8 w-32" />
-            <Skeleton className="mx-auto mt-2 h-4 w-48" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-11 w-full" />
-          </CardContent>
-        </Card>
+        <div className="w-full max-w-sm space-y-6 px-6">
+          <div className="text-center">
+            <Skeleton className="mx-auto h-8 w-48" />
+            <Skeleton className="mx-auto mt-3 h-4 w-64" />
+          </div>
+          <Skeleton className="h-12 w-full rounded-lg" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      {/* Subtle background glow — matches hero gradient aesthetic */}
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute top-1/3 left-1/2 h-[400px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/5 blur-3xl" />
+    <div className="relative flex min-h-screen items-center justify-center bg-background">
+      {/* Atmospheric background glow */}
+      <div className="absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute top-1/4 left-1/2 h-[500px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/[0.06] blur-[120px]" />
+        <div className="absolute bottom-1/4 right-1/4 h-[300px] w-[300px] rounded-full bg-primary/[0.03] blur-[80px]" />
       </div>
 
-      <Card className="w-full max-w-sm border-border/50 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold tracking-tight">
-            Welcome back
-          </CardTitle>
-          <CardDescription>
-            Sign in with your Discord account to continue
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <div className="w-full max-w-sm px-6">
+        {/* Header */}
+        <div className="mb-8 text-center">
+          {config?.branding.logoUrl ? (
+            <img
+              src={config.branding.logoUrl}
+              alt={config.bankName}
+              className="mx-auto mb-6 h-10"
+            />
+          ) : (
+            <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-xl border border-white/[0.08] bg-primary/10">
+              <Shield className="h-6 w-6 text-primary" />
+            </div>
+          )}
+          <h1 className="text-2xl font-bold tracking-tight">
+            Welcome to {config?.bankName ?? "your bank"}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Sign in to your account or create a new one — all through Discord.
+          </p>
+        </div>
+
+        {/* Main action */}
+        <div className="space-y-3">
           <Button
-            className="w-full text-white"
+            className="w-full text-white shadow-lg shadow-[#5865F2]/20 transition-shadow hover:shadow-[#5865F2]/30"
             size="lg"
             style={{ backgroundColor: DISCORD_COLOR }}
             onClick={redirectToDiscordLogin}
@@ -101,41 +114,52 @@ export function LoginPage(): React.ReactElement {
             Continue with Discord
           </Button>
 
-          {IS_MOCK_MODE && (
-            <>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border/50" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">Dev mode</span>
-                </div>
-              </div>
-
-              <Button
-                variant="outline"
-                className="w-full border-amber-500/30 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300"
-                size="lg"
-                onClick={handleMockLogin}
-                disabled={mockLoading}
-              >
-                <Bug className="mr-2 h-5 w-5" />
-                {mockLoading ? "Signing in..." : "Dev Login (Mock User)"}
-              </Button>
-
-              {mockError && (
-                <p className="text-center text-xs text-destructive">{mockError}</p>
-              )}
-            </>
-          )}
-
           <p className="text-center text-xs text-muted-foreground">
-            Discord is the only supported authentication method.
-            <br />
-            You&apos;ll be redirected to Discord to verify your identity.
+            New here? Your account will be created automatically.
           </p>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Dev mode login */}
+        {IS_MOCK_MODE && (
+          <div className="mt-6 space-y-3">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border/50" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Dev mode</span>
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              className="w-full border-amber-500/30 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300"
+              size="lg"
+              onClick={handleMockLogin}
+              disabled={mockLoading}
+            >
+              <Bug className="mr-2 h-5 w-5" />
+              {mockLoading ? "Signing in..." : "Dev Login (Mock User)"}
+            </Button>
+
+            {mockError && (
+              <p className="text-center text-xs text-destructive">{mockError}</p>
+            )}
+          </div>
+        )}
+
+        {/* Trust signals */}
+        <div className="mt-10 flex items-center justify-center gap-6 text-xs text-muted-foreground/60">
+          <div className="flex items-center gap-1.5">
+            <Shield className="h-3.5 w-3.5" />
+            <span>Secure login</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Zap className="h-3.5 w-3.5" />
+            <span>Instant access</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -27,8 +27,10 @@ export const siteConfig: SiteConfig = {
         headline: "Banking built for DemocracyCraft",
         subheadline:
           "Secure deposits, instant transfers, and full transparency. Your finances, modernized.",
-        ctaText: "Open an Account",
+        ctaText: "Get Started with Discord",
         ctaLink: "/login",
+        secondaryCtaText: "For Businesses",
+        secondaryCtaLink: "#business",
         showDashboardPreview: true,
         backgroundVariant: "gradient",
         alignment: "center",
@@ -119,9 +121,9 @@ export const siteConfig: SiteConfig = {
         heading: "Frequently Asked Questions",
         items: [
           {
-            question: "How do I open an account?",
+            question: "How do I create an account?",
             answer:
-              "Click 'Open an Account' and sign in with your Discord. Your account is created automatically.",
+              "Click 'Get Started' and sign in. If you're new, your account is created automatically.",
           },
           {
             question: "Are inter-bank transfers supported?",
@@ -149,7 +151,7 @@ export const siteConfig: SiteConfig = {
         heading: "Ready to modernize your banking?",
         description:
           "Join thousands of DemocracyCraft citizens who trust Reveille National Bank.",
-        buttonText: "Get Started Today",
+        buttonText: "Get Started",
         buttonLink: "/login",
         variant: "banner",
       },
@@ -206,11 +208,10 @@ export const siteConfig: SiteConfig = {
   },
   nav: {
     showLogin: true,
-    ctaText: "Open Account",
+    ctaText: "Get Started",
     ctaLink: "/login",
     links: [
-      { label: "Features", href: "#features" },
-      { label: "FAQ", href: "#faq" },
+      { label: "Business", href: "#business" },
     ],
   },
 };
