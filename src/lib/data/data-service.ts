@@ -11,7 +11,7 @@
 import { apiClient } from "./api-client";
 import * as mockData from "./mock-data";
 import type { SiteConfig } from "@/lib/config/site-config-schema";
-import type { BankAccount, PaginatedResponse, Session, Transaction, TransferRequest } from "./types";
+import type { BankAccount, PaginatedResponse, Session, Transaction, TransactionFilters, TransferRequest } from "./types";
 
 function isMockMode(): boolean {
   return import.meta.env.VITE_MOCK_MODE === "true";
@@ -62,6 +62,15 @@ export const dataService = {
 
   // ─── Account ───────────────────────────────────────────────
 
+  /** Get the current user's primary account. */
+  getMyAccount(): Promise<BankAccount> {
+    return fetchWithFallback(
+      () => apiClient.get<BankAccount>("/accounts/me"),
+      () => mockData.bankAccount,
+      "myAccount"
+    );
+  },
+
   getAccount(accountId: string): Promise<BankAccount> {
     return fetchWithFallback(
       () => apiClient.get<BankAccount>(`/accounts/${accountId}`),
@@ -74,19 +83,21 @@ export const dataService = {
 
   getTransactions(
     accountId: string,
-    page = 1
+    filters: TransactionFilters = {}
   ): Promise<PaginatedResponse<Transaction>> {
+    const params = new URLSearchParams();
+    if (filters.page) params.set("page", String(filters.page));
+    if (filters.pageSize) params.set("pageSize", String(filters.pageSize));
+    if (filters.type) params.set("type", filters.type);
+    if (filters.status) params.set("status", filters.status);
+    const qs = params.toString();
+
     return fetchWithFallback(
       () =>
         apiClient.get<PaginatedResponse<Transaction>>(
-          `/accounts/${accountId}/transactions?page=${page}`
+          `/accounts/${accountId}/transactions${qs ? `?${qs}` : ""}`
         ),
-      () => ({
-        data: mockData.transactions,
-        total: mockData.transactions.length,
-        page: 1,
-        pageSize: 20,
-      }),
+      () => mockData.getFilteredTransactions(filters),
       "transactions"
     );
   },

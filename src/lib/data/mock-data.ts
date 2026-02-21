@@ -6,7 +6,7 @@
  * The data-service.ts layer ensures this by checking VITE_MOCK_MODE.
  */
 import type { SiteConfig } from "@/lib/config/site-config-schema";
-import type { BankAccount, Session, Transaction } from "./types";
+import type { BankAccount, PaginatedResponse, Session, Transaction } from "./types";
 
 export const siteConfig: SiteConfig = {
   bankId: "demo-bank-001",
@@ -236,7 +236,7 @@ export const transactions: readonly Transaction[] = [
     currency: siteConfig.currency.code,
     description: "Government salary",
     status: "completed",
-    createdAt: "2026-02-15T14:30:00Z",
+    createdAt: "2026-02-21T14:30:00Z",
   },
   {
     id: "tx-002",
@@ -248,7 +248,7 @@ export const transactions: readonly Transaction[] = [
     counterparty: "Reverie Reserve",
     reference: "SWF-2026-00123",
     status: "completed",
-    createdAt: "2026-02-14T09:15:00Z",
+    createdAt: "2026-02-19T09:15:00Z",
   },
   {
     id: "tx-003",
@@ -256,11 +256,11 @@ export const transactions: readonly Transaction[] = [
     type: "transfer_in",
     amount: 3200,
     currency: siteConfig.currency.code,
-    description: "Business income - MarbleCorp invoice",
+    description: "Business income, MarbleCorp invoice",
     counterparty: "First National DC",
     reference: "SWF-2026-00118",
     status: "completed",
-    createdAt: "2026-02-13T16:45:00Z",
+    createdAt: "2026-02-17T16:45:00Z",
   },
   {
     id: "tx-004",
@@ -270,7 +270,7 @@ export const transactions: readonly Transaction[] = [
     currency: siteConfig.currency.code,
     description: "ATM withdrawal",
     status: "completed",
-    createdAt: "2026-02-12T11:00:00Z",
+    createdAt: "2026-02-15T11:00:00Z",
   },
   {
     id: "tx-005",
@@ -280,7 +280,7 @@ export const transactions: readonly Transaction[] = [
     currency: siteConfig.currency.code,
     description: "Property sale proceeds",
     status: "completed",
-    createdAt: "2026-02-10T08:20:00Z",
+    createdAt: "2026-02-13T08:20:00Z",
   },
   {
     id: "tx-006",
@@ -288,11 +288,109 @@ export const transactions: readonly Transaction[] = [
     type: "transfer_out",
     amount: 750,
     currency: siteConfig.currency.code,
-    description: "Utility payment - DemocracyCraft Power Co",
+    description: "Utility payment, DemocracyCraft Power Co",
     counterparty: "DC Utilities Bank",
     reference: "SWF-2026-00099",
     status: "pending",
-    createdAt: "2026-02-09T13:10:00Z",
+    createdAt: "2026-02-12T13:10:00Z",
+  },
+  {
+    id: "tx-007",
+    accountId: "acc-001",
+    type: "deposit",
+    amount: 2500,
+    currency: siteConfig.currency.code,
+    description: "Freelance payment, SkyTrader_42",
+    status: "completed",
+    createdAt: "2026-02-10T10:00:00Z",
+  },
+  {
+    id: "tx-008",
+    accountId: "acc-001",
+    type: "transfer_out",
+    amount: 300,
+    currency: siteConfig.currency.code,
+    description: "Market purchase, building materials",
+    counterparty: "DC Merchants Guild",
+    reference: "SWF-2026-00085",
+    status: "completed",
+    createdAt: "2026-02-08T15:30:00Z",
+  },
+  {
+    id: "tx-009",
+    accountId: "acc-001",
+    type: "transfer_in",
+    amount: 1800,
+    currency: siteConfig.currency.code,
+    description: "Tax refund",
+    counterparty: "DC Treasury",
+    reference: "SWF-2026-00072",
+    status: "completed",
+    createdAt: "2026-02-05T09:45:00Z",
+  },
+  {
+    id: "tx-010",
+    accountId: "acc-001",
+    type: "withdrawal",
+    amount: 150,
+    currency: siteConfig.currency.code,
+    description: "Cash withdrawal",
+    status: "completed",
+    createdAt: "2026-02-03T14:20:00Z",
+  },
+  {
+    id: "tx-011",
+    accountId: "acc-001",
+    type: "deposit",
+    amount: 5000,
+    currency: siteConfig.currency.code,
+    description: "Government salary",
+    status: "completed",
+    createdAt: "2026-02-01T14:30:00Z",
+  },
+  {
+    id: "tx-012",
+    accountId: "acc-001",
+    type: "transfer_out",
+    amount: 2000,
+    currency: siteConfig.currency.code,
+    description: "Business supplies, CityMayor_DC",
+    counterparty: "First National DC",
+    reference: "SWF-2026-00055",
+    status: "completed",
+    createdAt: "2026-01-30T11:15:00Z",
+  },
+  {
+    id: "tx-013",
+    accountId: "acc-001",
+    type: "transfer_in",
+    amount: 4500,
+    currency: siteConfig.currency.code,
+    description: "Contract payment, city renovation project",
+    counterparty: "DC Public Works",
+    reference: "SWF-2026-00048",
+    status: "completed",
+    createdAt: "2026-01-27T16:00:00Z",
+  },
+  {
+    id: "tx-014",
+    accountId: "acc-001",
+    type: "withdrawal",
+    amount: 800,
+    currency: siteConfig.currency.code,
+    description: "Equipment purchase",
+    status: "failed",
+    createdAt: "2026-01-25T10:30:00Z",
+  },
+  {
+    id: "tx-015",
+    accountId: "acc-001",
+    type: "deposit",
+    amount: 1500,
+    currency: siteConfig.currency.code,
+    description: "Auction proceeds, rare items",
+    status: "completed",
+    createdAt: "2026-01-23T13:45:00Z",
   },
 ] as const;
 
@@ -320,3 +418,26 @@ export const pendingTransaction: Transaction = {
   status: "pending",
   createdAt: new Date().toISOString(),
 };
+
+/** Apply filters to mock transactions (simulates server-side filtering). */
+export function getFilteredTransactions(
+  filters: import("./types").TransactionFilters
+): PaginatedResponse<Transaction> {
+  const pageSize = filters.pageSize ?? 10;
+  const page = filters.page ?? 1;
+
+  let filtered: readonly Transaction[] = transactions;
+
+  if (filters.type) {
+    filtered = filtered.filter((tx) => tx.type === filters.type);
+  }
+  if (filters.status) {
+    filtered = filtered.filter((tx) => tx.status === filters.status);
+  }
+
+  const total = filtered.length;
+  const start = (page - 1) * pageSize;
+  const data = filtered.slice(start, start + pageSize);
+
+  return { data, total, page, pageSize };
+}

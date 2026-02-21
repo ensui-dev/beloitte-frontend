@@ -73,6 +73,13 @@ export interface TransferRequest {
   readonly description?: string;
 }
 
+export interface TransactionFilters {
+  readonly type?: TransactionType;
+  readonly status?: TransactionStatus;
+  readonly page?: number;
+  readonly pageSize?: number;
+}
+
 // ─── Bank (admin) ──────────────────────────────────────────────
 
 export const BANK_STATUSES = ["active", "suspended"] as const;
