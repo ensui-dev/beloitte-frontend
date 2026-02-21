@@ -5,18 +5,23 @@
  *   - A React component for rendering
  *   - A Zod schema for config validation
  *   - Default config values
- *   - Metadata (label, icon, max instances)
+ *   - Metadata (label, icon, description, max instances)
  *
- * The editor will also register editor components per module type (Phase 8).
+ * The editor registry stores per-module editor forms separately so that
+ * editor code is only imported in the admin dashboard, never on the
+ * public landing page.
  */
 import type { ComponentType } from "react";
 import type { z } from "zod";
 import type { ModuleType } from "./site-config-schema";
 
+// ─── Module Registration ──────────────────────────────────────
+
 export interface ModuleRegistration<TConfig = Record<string, unknown>> {
   readonly type: ModuleType;
   readonly label: string;
   readonly icon: string;
+  readonly description?: string;
   readonly component: ComponentType<{ config: TConfig }>;
   readonly schema: z.ZodSchema<TConfig>;
   readonly defaultConfig: TConfig;
@@ -51,4 +56,33 @@ export function getAllModules(): readonly ModuleRegistration[] {
 
 export function isRegistered(type: string): type is ModuleType {
   return registry.has(type as ModuleType);
+}
+
+// ─── Editor Registration ──────────────────────────────────────
+
+export interface ModuleEditorProps<TConfig> {
+  readonly config: TConfig;
+  readonly onChange: (config: TConfig) => void;
+}
+
+export interface EditorRegistration<TConfig = Record<string, unknown>> {
+  readonly type: ModuleType;
+  readonly editor: ComponentType<ModuleEditorProps<TConfig>>;
+}
+
+const editorRegistry = new Map<ModuleType, EditorRegistration>();
+
+export function registerEditor<TConfig>(
+  registration: EditorRegistration<TConfig>
+): void {
+  editorRegistry.set(
+    registration.type,
+    registration as unknown as EditorRegistration
+  );
+}
+
+export function getEditor(
+  type: ModuleType
+): EditorRegistration | undefined {
+  return editorRegistry.get(type);
 }

@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 import { BrowserRouter } from "react-router";
 import { App } from "./App";
 import { AuthProvider } from "@/components/providers/auth-provider";
@@ -35,6 +36,7 @@ createRoot(rootElement).render(
         <BrowserRouter>
           <AuthProvider>
             <App />
+            <Toaster />
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
