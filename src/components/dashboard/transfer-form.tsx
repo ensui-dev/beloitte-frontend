@@ -6,23 +6,52 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2, Loader2, Send, AlertCircle } from "lucide-react";
+import { CheckCircle2, Loader2, Send, AlertCircle, Building2 } from "lucide-react";
 import type { Transaction, TransferRequest } from "@/lib/data/types";
 import type { CurrencyConfig } from "@/lib/config/site-config-schema";
+import { formatCurrency } from "@/lib/config/currency-utils";
+
+// ─── BWIFT IBAN Utilities ───────────────────────────────────
+
+/**
+ * BWIFT IBAN format: 2 letters (server) + 2 digits (check) + 4 letters (bank) + 14 digits (account)
+ * Example: DC12RVNB00000000042069
+ * Display: DC12 RVNB 0000 0000 0420 69
+ */
+const BWIFT_IBAN_REGEX = /^[A-Z]{2}\d{2}[A-Z]{4}\d{14}$/;
+const BWIFT_IBAN_LENGTH = 22;
+
+/** Strip all spaces from an IBAN string. */
+function stripIban(value: string): string {
+  return value.replace(/\s/g, "").toUpperCase();
+}
+
+/** Format a raw IBAN into groups of 4 for display. */
+function formatIban(raw: string): string {
+  const clean = stripIban(raw);
+  return clean.replace(/(.{4})(?=.)/g, "$1 ");
+}
+
+/** Extract the 4-letter bank identifier from a valid IBAN. */
+function extractBankCode(iban: string): string {
+  return stripIban(iban).slice(4, 8);
+}
 
 // ─── Validation Schema ──────────────────────────────────────
 
 const transferSchema = z.object({
-  toBankCode: z
+  toIban: z
     .string()
-    .min(1, "Bank code is required")
-    .max(10, "Bank code is too long")
-    .regex(/^[A-Za-z0-9]+$/, "Bank code must be alphanumeric"),
-  toAccountNumber: z
-    .string()
-    .min(1, "Account number is required")
-    .max(30, "Account number is too long"),
+    .min(1, "Recipient IBAN is required")
+    .transform(stripIban)
+    .pipe(
+      z
+        .string()
+        .length(BWIFT_IBAN_LENGTH, `IBAN must be exactly ${BWIFT_IBAN_LENGTH} characters`)
+        .regex(BWIFT_IBAN_REGEX, "Invalid BWIFT IBAN format")
+    ),
   amount: z
     .number({ invalid_type_error: "Amount must be a number" })
     .positive("Amount must be greater than 0"),
@@ -34,18 +63,17 @@ const transferSchema = z.object({
 interface TransferFormProps {
   readonly accountId: string;
   readonly currency: CurrencyConfig;
+  readonly balance?: number;
 }
 
 interface FormErrors {
-  readonly toBankCode?: string;
-  readonly toAccountNumber?: string;
+  readonly toIban?: string;
   readonly amount?: string;
   readonly description?: string;
 }
 
-export function TransferForm({ accountId, currency }: TransferFormProps): React.ReactElement {
-  const [toBankCode, setToBankCode] = useState("");
-  const [toAccountNumber, setToAccountNumber] = useState("");
+export function TransferForm({ accountId, currency, balance }: TransferFormProps): React.ReactElement {
+  const [ibanRaw, setIbanRaw] = useState("");
   const [amountStr, setAmountStr] = useState("");
   const [description, setDescription] = useState("");
   const [errors, setErrors] = useState<FormErrors>({});
@@ -54,13 +82,27 @@ export function TransferForm({ accountId, currency }: TransferFormProps): React.
     mutationFn: (transfer) => dataService.createTransfer(transfer),
   });
 
+  // Derive parsed state from raw input
+  const cleanIban = stripIban(ibanRaw);
+  const ibanValid = BWIFT_IBAN_REGEX.test(cleanIban);
+  const parsedBankCode = ibanValid ? extractBankCode(cleanIban) : null;
+
+  const handleIbanChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const raw = e.target.value;
+    // Allow only alphanumeric and spaces, cap at IBAN length + spaces
+    const filtered = raw.replace(/[^a-zA-Z0-9\s]/g, "");
+    const clean = stripIban(filtered);
+    if (clean.length <= BWIFT_IBAN_LENGTH) {
+      setIbanRaw(formatIban(clean));
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault();
     setErrors({});
 
     const parsed = transferSchema.safeParse({
-      toBankCode: toBankCode.trim(),
-      toAccountNumber: toAccountNumber.trim(),
+      toIban: ibanRaw,
       amount: amountStr === "" ? undefined : Number(amountStr),
       description: description.trim() || undefined,
     });
@@ -79,8 +121,7 @@ export function TransferForm({ accountId, currency }: TransferFormProps): React.
 
     mutation.mutate({
       fromAccountId: accountId,
-      toBankCode: parsed.data.toBankCode,
-      toAccountNumber: parsed.data.toAccountNumber,
+      toIban: parsed.data.toIban,
       amount: parsed.data.amount,
       currency: currency.code,
       description: parsed.data.description,
@@ -88,8 +129,7 @@ export function TransferForm({ accountId, currency }: TransferFormProps): React.
   };
 
   const resetForm = (): void => {
-    setToBankCode("");
-    setToAccountNumber("");
+    setIbanRaw("");
     setAmountStr("");
     setDescription("");
     setErrors({});
@@ -136,52 +176,58 @@ export function TransferForm({ accountId, currency }: TransferFormProps): React.
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Recipient bank code */}
+          {/* Recipient IBAN */}
           <div className="space-y-2">
-            <Label htmlFor="bankCode">Recipient bank code</Label>
+            <Label htmlFor="iban">Recipient IBAN</Label>
             <Input
-              id="bankCode"
-              placeholder="e.g. RNB"
-              value={toBankCode}
-              onChange={(e) => setToBankCode(e.target.value)}
-              className="border-white/[0.06] bg-white/[0.02]"
-              aria-invalid={!!errors.toBankCode}
+              id="iban"
+              placeholder="DC00 XXXX 0000 0000 0000 00"
+              value={ibanRaw}
+              onChange={handleIbanChange}
+              className="border-white/[0.06] bg-white/[0.02] font-mono tracking-wider"
+              aria-invalid={!!errors.toIban}
+              autoComplete="off"
+              spellCheck={false}
             />
-            {errors.toBankCode && (
-              <p className="text-xs text-destructive">{errors.toBankCode}</p>
+            {errors.toIban && (
+              <p className="text-xs text-destructive">{errors.toIban}</p>
+            )}
+            {parsedBankCode && !errors.toIban && (
+              <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+                <Building2 className="h-3 w-3" />
+                Bank identified: {parsedBankCode}
+              </div>
             )}
           </div>
 
-          {/* Recipient account number */}
-          <div className="space-y-2">
-            <Label htmlFor="accountNumber">Recipient account number</Label>
-            <Input
-              id="accountNumber"
-              placeholder="e.g. RNB-00012345"
-              value={toAccountNumber}
-              onChange={(e) => setToAccountNumber(e.target.value)}
-              className="border-white/[0.06] bg-white/[0.02]"
-              aria-invalid={!!errors.toAccountNumber}
-            />
-            {errors.toAccountNumber && (
-              <p className="text-xs text-destructive">{errors.toAccountNumber}</p>
-            )}
-          </div>
+          <Separator className="bg-white/[0.06]" />
 
           {/* Amount */}
           <div className="space-y-2">
-            <Label htmlFor="amount">Amount ({currency.symbol})</Label>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              min="0.01"
-              placeholder="0.00"
-              value={amountStr}
-              onChange={(e) => setAmountStr(e.target.value)}
-              className="border-white/[0.06] bg-white/[0.02]"
-              aria-invalid={!!errors.amount}
-            />
+            <div className="flex items-center justify-between">
+              <Label htmlFor="amount">Amount</Label>
+              {balance !== undefined && (
+                <span className="text-xs text-muted-foreground">
+                  Available: {formatCurrency(balance, currency)}
+                </span>
+              )}
+            </div>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                {currency.symbol}
+              </span>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="0.00"
+                value={amountStr}
+                onChange={(e) => setAmountStr(e.target.value)}
+                className="border-white/[0.06] bg-white/[0.02] pl-16"
+                aria-invalid={!!errors.amount}
+              />
+            </div>
             {errors.amount && (
               <p className="text-xs text-destructive">{errors.amount}</p>
             )}
@@ -190,7 +236,7 @@ export function TransferForm({ accountId, currency }: TransferFormProps): React.
           {/* Description (optional) */}
           <div className="space-y-2">
             <Label htmlFor="description">
-              Description <span className="text-muted-foreground">(optional)</span>
+              Reference <span className="text-muted-foreground">(optional)</span>
             </Label>
             <Input
               id="description"

@@ -220,7 +220,7 @@ export const bankAccount: BankAccount = {
   id: "acc-001",
   userId: "user-001",
   bankId: "demo-bank-001",
-  accountNumber: "RNB-00042069",
+  accountNumber: "DC12RVNB00000000424242",
   balance: 15420.5,
   currency: siteConfig.currency.code,
   status: "active",

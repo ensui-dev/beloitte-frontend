@@ -66,8 +66,7 @@ export interface Transaction {
 
 export interface TransferRequest {
   readonly fromAccountId: string;
-  readonly toBankCode: string;
-  readonly toAccountNumber: string;
+  readonly toIban: string;
   readonly amount: number;
   readonly currency: string;
   readonly description?: string;

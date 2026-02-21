@@ -33,7 +33,7 @@ export function DashboardTransfers(): React.ReactElement {
           <Skeleton className="h-12 w-full" />
         </div>
       ) : (
-        <TransferForm accountId={account.id} currency={config.currency} />
+        <TransferForm accountId={account.id} currency={config.currency} balance={account.balance} />
       )}
     </div>
   );
