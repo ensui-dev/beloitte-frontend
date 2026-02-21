@@ -51,7 +51,7 @@ export function LoginPage(): React.ReactElement {
     try {
       await handleLoginToken(MOCK_TOKEN);
     } catch {
-      setMockError("Mock login failed — check console for details.");
+      setMockError("Mock login failed. Check console for details.");
     } finally {
       setMockLoading(false);
     }
@@ -98,7 +98,7 @@ export function LoginPage(): React.ReactElement {
             Welcome to {config?.bankName ?? "your bank"}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Sign in to your account or create a new one — all through Discord.
+            Sign in or create an account, all through Discord.
           </p>
         </div>
 
