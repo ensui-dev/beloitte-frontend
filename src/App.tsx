@@ -1,8 +1,16 @@
-import { Routes, Route } from "react-router";
+import { Routes, Route, Navigate } from "react-router";
 import { LandingPage } from "@/routes/landing";
 import { LoginPage } from "@/routes/login";
 import { AuthCallbackPage } from "@/routes/auth-callback";
 import { AuthGuard } from "@/lib/auth/auth-guard";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
+import { DashboardOverview } from "@/routes/dashboard/overview";
+import { DashboardTransactions } from "@/routes/dashboard/transactions";
+import { DashboardTransfers } from "@/routes/dashboard/transfers";
+import { AdminOverview } from "@/routes/dashboard/admin/overview";
+import { AdminSiteEditor } from "@/routes/dashboard/admin/site-editor";
+import { AdminTheme } from "@/routes/dashboard/admin/theme";
+import { AdminSettings } from "@/routes/dashboard/admin/settings";
 
 export function App(): React.ReactElement {
   return (
@@ -12,25 +20,22 @@ export function App(): React.ReactElement {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
-      {/* Protected routes — requires authentication */}
+      {/* Dashboard — requires authentication */}
       <Route element={<AuthGuard />}>
-        {/* Dashboard routes - TODO Phase 6+ */}
-        {/* <Route path="/dashboard" element={<DashboardLayout />}> */}
-        {/*   <Route index element={<Navigate to="player" replace />} /> */}
-        {/*   <Route path="player" element={<PlayerOverview />} /> */}
-        {/*   <Route path="player/transactions" element={<Transactions />} /> */}
-        {/*   <Route path="player/transfers" element={<Transfers />} /> */}
-        {/* </Route> */}
-      </Route>
+        <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route index element={<Navigate to="overview" replace />} />
+          <Route path="overview" element={<DashboardOverview />} />
+          <Route path="transactions" element={<DashboardTransactions />} />
+          <Route path="transfers" element={<DashboardTransfers />} />
 
-      {/* Admin-only routes — requires admin role */}
-      <Route element={<AuthGuard requiredRole="admin" />}>
-        {/* <Route path="/dashboard/admin" element={<AdminLayout />}> */}
-        {/*   <Route index element={<AdminOverview />} /> */}
-        {/*   <Route path="site-editor" element={<SiteEditor />} /> */}
-        {/*   <Route path="theme" element={<ThemeEditor />} /> */}
-        {/*   <Route path="settings" element={<Settings />} /> */}
-        {/* </Route> */}
+          {/* Admin routes — requires admin role */}
+          <Route element={<AuthGuard requiredRole="admin" />}>
+            <Route path="admin" element={<AdminOverview />} />
+            <Route path="admin/site-editor" element={<AdminSiteEditor />} />
+            <Route path="admin/theme" element={<AdminTheme />} />
+            <Route path="admin/settings" element={<AdminSettings />} />
+          </Route>
+        </Route>
       </Route>
     </Routes>
   );
