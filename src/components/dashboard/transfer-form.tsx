@@ -53,7 +53,7 @@ const transferSchema = z.object({
         .regex(BWIFT_IBAN_REGEX, "Invalid BWIFT IBAN format")
     ),
   amount: z
-    .number({ invalid_type_error: "Amount must be a number" })
+    .number({ message: "Amount must be a number" })
     .positive("Amount must be greater than 0"),
   description: z.string().max(200, "Description is too long").optional(),
 });
@@ -67,9 +67,9 @@ interface TransferFormProps {
 }
 
 interface FormErrors {
-  readonly toIban?: string;
-  readonly amount?: string;
-  readonly description?: string;
+  toIban?: string;
+  amount?: string;
+  description?: string;
 }
 
 export function TransferForm({ accountId, currency, balance }: TransferFormProps): React.ReactElement {
@@ -121,10 +121,10 @@ export function TransferForm({ accountId, currency, balance }: TransferFormProps
 
     mutation.mutate({
       fromAccountId: accountId,
-      toIban: parsed.data.toIban,
-      amount: parsed.data.amount,
+      toIban: parsed.data.toIban as string,
+      amount: parsed.data.amount as number,
       currency: currency.code,
-      description: parsed.data.description,
+      description: parsed.data.description as string | undefined,
     });
   };
 

@@ -18,7 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Loader2, Save } from "lucide-react";
+import { AlertCircle, Save } from "lucide-react";
 import { getModule, getEditor } from "@/lib/config/module-registry";
 import { resolveIcon } from "./editor-utils";
 import type { ModuleInstance } from "@/lib/config/site-config-schema";
