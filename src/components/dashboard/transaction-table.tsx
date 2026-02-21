@@ -11,8 +11,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowDownLeft,
   ArrowUpRight,
-  CreditCard,
-  Banknote,
 } from "lucide-react";
 import type { Transaction, TransactionType, TransactionStatus } from "@/lib/data/types";
 import type { CurrencyConfig } from "@/lib/config/site-config-schema";
@@ -21,8 +19,8 @@ import { formatCurrency } from "@/lib/config/currency-utils";
 // ─── Helpers ────────────────────────────────────────────────
 
 const TYPE_CONFIG: Record<TransactionType, { label: string; icon: React.ElementType; isIncome: boolean }> = {
-  deposit: { label: "Deposit", icon: Banknote, isIncome: true },
-  withdrawal: { label: "Withdrawal", icon: CreditCard, isIncome: false },
+  deposit: { label: "Deposit", icon: ArrowDownLeft, isIncome: true },
+  withdrawal: { label: "Withdrawal", icon: ArrowUpRight, isIncome: false },
   transfer_in: { label: "Transfer In", icon: ArrowDownLeft, isIncome: true },
   transfer_out: { label: "Transfer Out", icon: ArrowUpRight, isIncome: false },
 };
