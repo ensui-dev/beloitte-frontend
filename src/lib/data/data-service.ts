@@ -17,6 +17,36 @@ function isMockMode(): boolean {
   return import.meta.env.VITE_MOCK_MODE === "true";
 }
 
+// ─── Mock Persistence (localStorage) ──────────────────────────
+// In mock mode, site config edits are persisted to localStorage so
+// changes survive page reloads and are visible on the landing page.
+
+const MOCK_CONFIG_KEY = "beloitte:mock-site-config";
+
+function getMockSiteConfig(): SiteConfig {
+  if (!isMockMode()) return mockData.siteConfig;
+
+  try {
+    const stored = localStorage.getItem(MOCK_CONFIG_KEY);
+    if (stored) {
+      return JSON.parse(stored) as SiteConfig;
+    }
+  } catch {
+    // Corrupted data — fall through to default
+  }
+  return mockData.siteConfig;
+}
+
+function setMockSiteConfig(config: SiteConfig): void {
+  if (!isMockMode()) return;
+
+  try {
+    localStorage.setItem(MOCK_CONFIG_KEY, JSON.stringify(config));
+  } catch {
+    // Storage full or unavailable — silently ignore
+  }
+}
+
 /**
  * Wraps an API call with mock data fallback in dev mode.
  * In production, the API call must succeed or the error propagates.
@@ -47,7 +77,7 @@ export const dataService = {
   getSiteConfig(bankId: string): Promise<SiteConfig> {
     return fetchWithFallback(
       () => apiClient.get<SiteConfig>(`/config/${bankId}`),
-      () => mockData.siteConfig,
+      () => getMockSiteConfig(),
       "siteConfig"
     );
   },
@@ -55,7 +85,10 @@ export const dataService = {
   updateSiteConfig(bankId: string, config: SiteConfig): Promise<SiteConfig> {
     return fetchWithFallback(
       () => apiClient.put<SiteConfig>(`/config/${bankId}`, config),
-      () => config,
+      () => {
+        setMockSiteConfig(config);
+        return config;
+      },
       "updateSiteConfig"
     );
   },
