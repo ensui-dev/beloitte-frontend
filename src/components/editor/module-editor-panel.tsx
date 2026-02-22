@@ -89,7 +89,7 @@ export function ModuleEditorPanel({
           </SheetDescription>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 -mx-6 px-6">
+        <ScrollArea className="min-h-0 flex-1 -mx-6 px-6 overflow-hidden">
           <div className="space-y-4 py-4">
             {validationError && (
               <Alert variant="destructive">
