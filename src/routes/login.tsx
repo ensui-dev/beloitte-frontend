@@ -17,9 +17,10 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { useSiteConfig } from "@/hooks/use-site-config";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { redirectToDiscordLogin } from "@/lib/auth/discord";
+import { seedMockAccounts } from "@/lib/data/data-service";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LogIn, Bug, Shield, Zap } from "lucide-react";
+import { LogIn, Bug, Database, Shield, Zap } from "lucide-react";
 
 const IS_MOCK_MODE = import.meta.env.VITE_MOCK_MODE === "true";
 
@@ -38,8 +39,12 @@ export function LoginPage(): React.ReactElement {
 
   usePageTitle("Sign In", config?.bankName);
 
-  // If already authenticated, redirect to dashboard (or the page they came from)
+  // If already authenticated, redirect appropriately
   if (state.status === "authenticated") {
+    // New users (no accounts) always go to onboarding first
+    if (!state.session.hasAccounts) {
+      return <Navigate to="/onboarding" replace />;
+    }
     const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? "/dashboard";
     return <Navigate to={from} replace />;
   }
@@ -139,8 +144,34 @@ export function LoginPage(): React.ReactElement {
               disabled={mockLoading}
             >
               <Bug className="mr-2 h-5 w-5" />
-              {mockLoading ? "Signing in..." : "Dev Login (Mock User)"}
+              {mockLoading ? "Signing in..." : "Dev Login"}
             </Button>
+
+            <Button
+              variant="outline"
+              className="w-full border-zinc-500/30 text-zinc-400 hover:bg-zinc-500/10 hover:text-zinc-300"
+              size="sm"
+              onClick={async () => {
+                setMockLoading(true);
+                setMockError(null);
+                try {
+                  seedMockAccounts();
+                  await handleLoginToken(MOCK_TOKEN);
+                } catch {
+                  setMockError("Mock login failed. Check console for details.");
+                } finally {
+                  setMockLoading(false);
+                }
+              }}
+              disabled={mockLoading}
+            >
+              <Database className="mr-2 h-4 w-4" />
+              {mockLoading ? "Signing in..." : "Dev Login (Seeded Data)"}
+            </Button>
+
+            <p className="text-center text-[10px] text-muted-foreground/60">
+              Seeded skips onboarding with pre-populated accounts
+            </p>
 
             {mockError && (
               <p className="text-center text-xs text-destructive">{mockError}</p>

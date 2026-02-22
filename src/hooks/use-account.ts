@@ -1,16 +1,42 @@
 /**
- * React Query hook for the current user's bank account.
- * Wraps dataService.getMyAccount() with caching and loading states.
+ * React Query hooks for bank accounts.
+ *
+ * useAccounts()      — fetches all accounts for the current user
+ * useCreateAccount() — mutation to create a new personal/business account
+ * useAccount()       — DEPRECATED, kept for backward compat
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { dataService } from "@/lib/data/data-service";
-import type { BankAccount } from "@/lib/data/types";
+import type { AccountCreationRequest, BankAccount } from "@/lib/data/types";
 
-const MY_ACCOUNT_KEY = ["myAccount"] as const;
+export const ACCOUNTS_QUERY_KEY = ["myAccounts"] as const;
 
+/** Fetches all accounts for the current user. */
+export function useAccounts() {
+  return useQuery<BankAccount[]>({
+    queryKey: ACCOUNTS_QUERY_KEY,
+    queryFn: () => dataService.getMyAccounts(),
+  });
+}
+
+/** Mutation hook for creating a new account. Invalidates the accounts cache on success. */
+export function useCreateAccount() {
+  const queryClient = useQueryClient();
+  return useMutation<BankAccount, Error, AccountCreationRequest>({
+    mutationFn: (request) => dataService.createAccount(request),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ACCOUNTS_QUERY_KEY });
+    },
+  });
+}
+
+/**
+ * @deprecated Use useAccounts() + AccountProvider instead.
+ * Kept temporarily so existing consumers don't break during migration.
+ */
 export function useAccount() {
   return useQuery<BankAccount>({
-    queryKey: MY_ACCOUNT_KEY,
+    queryKey: ["myAccount"],
     queryFn: () => dataService.getMyAccount(),
   });
 }

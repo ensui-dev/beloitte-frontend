@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Link } from "react-router";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useSiteConfig } from "@/hooks/use-site-config";
-import { useAccount } from "@/hooks/use-account";
+import { useAccountContext } from "@/components/providers/account-provider";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useBwiftHealth } from "@/hooks/use-bwift-health";
 import { formatCurrency } from "@/lib/config/currency-utils";
@@ -30,6 +30,10 @@ import {
   TrendingUp,
   TrendingDown,
   Wallet,
+  User,
+  Building2,
+  Copy,
+  Check,
 } from "lucide-react";
 import type { Transaction } from "@/lib/data/types";
 import type { BwiftStatus } from "@/lib/data/types";
@@ -139,13 +143,23 @@ function TopCardsSkeleton(): React.ReactElement {
 
 export function DashboardOverview(): React.ReactElement {
   const { data: config } = useSiteConfig();
-  const { data: account, isLoading: accountLoading } = useAccount();
+  const { selectedAccount: account, isLoading: accountLoading } = useAccountContext();
   const { data: txResponse, isLoading: txLoading } = useTransactions(account?.id, {
     pageSize: 100,
   });
 
   const [transferOpen, setTransferOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleCopyIban = useCallback((): void => {
+    if (!account) return;
+    void navigator.clipboard.writeText(account.accountNumber);
+    setCopied(true);
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
+  }, [account]);
 
   usePageTitle("Overview", config?.bankName);
 
@@ -172,9 +186,21 @@ export function DashboardOverview(): React.ReactElement {
           {/* Balance Summary Card */}
           <Card className="border-white/[0.06] bg-white/[0.02] backdrop-blur-sm">
             <CardContent className="p-6">
-              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                <Wallet className="h-3.5 w-3.5" />
-                Balance
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                  <Wallet className="h-3.5 w-3.5" />
+                  {account?.accountName ?? "Balance"}
+                </div>
+                {account && (
+                  <div className="flex items-center gap-1 rounded-full border border-white/[0.06] bg-white/[0.03] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                    {account.accountType === "business" ? (
+                      <Building2 className="h-3 w-3" />
+                    ) : (
+                      <User className="h-3 w-3" />
+                    )}
+                    {account.accountType}
+                  </div>
+                )}
               </div>
               <p className="mt-2 text-3xl font-semibold tracking-tight">
                 {formatCurrency(account?.balance ?? 0, config.currency)}
@@ -211,7 +237,31 @@ export function DashboardOverview(): React.ReactElement {
                 Quick Actions
               </div>
 
-              <div className="mt-4 flex gap-3">
+              {/* Account number / IBAN */}
+              {account && (
+                <button
+                  type="button"
+                  className="mt-3 flex w-full items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-left transition-colors hover:bg-white/[0.04]"
+                  onClick={handleCopyIban}
+                  title="Click to copy"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                      {copied ? "Copied!" : "Account Number (BWIFT IBAN)"}
+                    </p>
+                    <p className="mt-0.5 truncate font-mono text-xs tracking-wider text-foreground">
+                      {account.accountNumber}
+                    </p>
+                  </div>
+                  {copied ? (
+                    <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  )}
+                </button>
+              )}
+
+              <div className="mt-3 flex gap-3">
                 <Button
                   variant="outline"
                   className="flex-1 gap-2 border-white/[0.06]"

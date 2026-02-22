@@ -25,7 +25,7 @@ export function AuthCallbackPage(): React.ReactElement {
   usePageTitle("Signing In");
 
   const [searchParams] = useSearchParams();
-  const { handleLoginToken } = useAuth();
+  const { state: authState, handleLoginToken } = useAuth();
   const [callbackState, setCallbackState] = useState<CallbackState>("processing");
   const [errorMessage, setErrorMessage] = useState("");
   const processedRef = useRef(false);
@@ -61,7 +61,12 @@ export function AuthCallbackPage(): React.ReactElement {
   }, [searchParams, handleLoginToken]);
 
   if (callbackState === "success") {
-    return <Navigate to="/dashboard" replace />;
+    // New users (no accounts) go to onboarding; existing users go to dashboard
+    const destination =
+      authState.status === "authenticated" && !authState.session.hasAccounts
+        ? "/onboarding"
+        : "/dashboard";
+    return <Navigate to={destination} replace />;
   }
 
   if (callbackState === "error") {

@@ -11,7 +11,7 @@
 import { apiClient } from "./api-client";
 import * as mockData from "./mock-data";
 import type { SiteConfig } from "@/lib/config/site-config-schema";
-import type { BackendHealth, BankAccount, BwiftHealth, PaginatedResponse, Session, Transaction, TransactionFilters, TransferRequest, WithdrawRequest } from "./types";
+import type { AccountCreationRequest, BackendHealth, BankAccount, BwiftHealth, PaginatedResponse, Session, Transaction, TransactionFilters, TransferRequest, WithdrawRequest } from "./types";
 
 function isMockMode(): boolean {
   return import.meta.env.VITE_MOCK_MODE === "true";
@@ -32,7 +32,7 @@ const MOCK_VERSION_KEY = "beloitte:mock-version";
  * Bump this any time mock-data.ts defaults change in a way that
  * should invalidate users' saved localStorage state.
  */
-const MOCK_DATA_VERSION = "3";
+const MOCK_DATA_VERSION = "5";
 
 function getMockSiteConfig(): SiteConfig {
   if (!isMockMode()) return mockData.siteConfig;
@@ -40,8 +40,9 @@ function getMockSiteConfig(): SiteConfig {
   try {
     const storedVersion = localStorage.getItem(MOCK_VERSION_KEY);
     if (storedVersion !== MOCK_DATA_VERSION) {
-      // Stale data from an older mock version — discard it
+      // Stale data from an older mock version — discard all mock state
       localStorage.removeItem(MOCK_CONFIG_KEY);
+      localStorage.removeItem(MOCK_ACCOUNTS_KEY);
       localStorage.setItem(MOCK_VERSION_KEY, MOCK_DATA_VERSION);
       return mockData.siteConfig;
     }
@@ -65,6 +66,54 @@ function setMockSiteConfig(config: SiteConfig): void {
   } catch {
     // Storage full or unavailable — silently ignore
   }
+}
+
+// ─── Mock Account Persistence (localStorage) ─────────────────
+// Accounts are stored separately from site config because they're
+// user-scoped (site config is bank-scoped).
+//
+// Fresh localStorage = no accounts = onboarding flow, just like
+// production after a first Discord OAuth login. Once the user
+// creates accounts through the wizard, they persist here.
+
+const MOCK_ACCOUNTS_KEY = "beloitte:mock-accounts";
+
+/**
+ * Seed mock accounts into localStorage from the built-in mock data.
+ * Called by "Dev Login (Seeded)" to skip onboarding and jump
+ * straight to a populated dashboard for testing.
+ */
+export function seedMockAccounts(): void {
+  if (!isMockMode()) return;
+  setMockAccounts([...mockData.bankAccounts]);
+}
+
+function getMockAccounts(): BankAccount[] {
+  if (!isMockMode()) return [...mockData.bankAccounts];
+
+  try {
+    const stored = localStorage.getItem(MOCK_ACCOUNTS_KEY);
+    if (stored) return JSON.parse(stored) as BankAccount[];
+  } catch { /* fall through */ }
+  // Fresh state: no accounts — mirrors production for a new user
+  return [];
+}
+
+function setMockAccounts(accounts: BankAccount[]): void {
+  if (!isMockMode()) return;
+  try {
+    localStorage.setItem(MOCK_ACCOUNTS_KEY, JSON.stringify(accounts));
+  } catch { /* storage full — ignore */ }
+}
+
+function generateMockIban(): string {
+  const digits = Array.from({ length: 14 }, () => Math.floor(Math.random() * 10)).join("");
+  return `DC12RVNB${digits}`;
+}
+
+function getMockSession(): Session {
+  const accounts = getMockAccounts();
+  return { ...mockData.session, hasAccounts: accounts.length > 0 };
 }
 
 /**
@@ -113,13 +162,25 @@ export const dataService = {
     );
   },
 
-  // ─── Account ───────────────────────────────────────────────
+  // ─── Accounts ──────────────────────────────────────────────
 
-  /** Get the current user's primary account. */
+  /** Get all accounts for the current user. */
+  getMyAccounts(): Promise<BankAccount[]> {
+    return fetchWithFallback(
+      () => apiClient.get<BankAccount[]>("/accounts/me/all"),
+      () => getMockAccounts(),
+      "myAccounts"
+    );
+  },
+
+  /** @deprecated Use getMyAccounts() — kept for backward compat. */
   getMyAccount(): Promise<BankAccount> {
     return fetchWithFallback(
       () => apiClient.get<BankAccount>("/accounts/me"),
-      () => mockData.bankAccount,
+      () => {
+        const accounts = getMockAccounts();
+        return accounts[0] ?? mockData.bankAccount;
+      },
       "myAccount"
     );
   },
@@ -127,8 +188,40 @@ export const dataService = {
   getAccount(accountId: string): Promise<BankAccount> {
     return fetchWithFallback(
       () => apiClient.get<BankAccount>(`/accounts/${accountId}`),
-      () => mockData.bankAccount,
+      () => {
+        const accounts = getMockAccounts();
+        return accounts.find((a) => a.id === accountId) ?? accounts[0] ?? mockData.bankAccount;
+      },
       "account"
+    );
+  },
+
+  /** Create a new account (personal or business). */
+  createAccount(request: AccountCreationRequest): Promise<BankAccount> {
+    return fetchWithFallback(
+      () => apiClient.post<BankAccount>("/accounts", request),
+      () => {
+        const newAccount: BankAccount = {
+          id: `acc-${crypto.randomUUID().slice(0, 8)}`,
+          userId: mockData.session.user.id,
+          bankId: request.bankId,
+          accountNumber: generateMockIban(),
+          balance: request.initialDeposit,
+          currency: mockData.siteConfig.currency.code,
+          status: "active",
+          createdAt: new Date().toISOString(),
+          accountType: request.accountType,
+          accountName: request.accountName,
+          initialDeposit: request.initialDeposit,
+          netWorth: request.netWorth,
+          companyCapital: request.companyCapital,
+        };
+        const accounts = getMockAccounts();
+        accounts.push(newAccount);
+        setMockAccounts(accounts);
+        return newAccount;
+      },
+      "createAccount"
     );
   },
 
@@ -200,7 +293,7 @@ export const dataService = {
   getSession(): Promise<Session> {
     return fetchWithFallback(
       () => apiClient.get<Session>("/auth/me"),
-      () => mockData.session,
+      () => getMockSession(),
       "session"
     );
   },

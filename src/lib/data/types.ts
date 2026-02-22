@@ -22,9 +22,13 @@ export interface Session {
   readonly activeRole: UserRole;
   readonly bankId: string;
   readonly accessToken: string;
+  readonly hasAccounts: boolean;
 }
 
 // ─── Banking ───────────────────────────────────────────────────
+
+export const ACCOUNT_TYPES = ["personal", "business"] as const;
+export type AccountType = (typeof ACCOUNT_TYPES)[number];
 
 export const ACCOUNT_STATUSES = ["active", "frozen", "closed"] as const;
 export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
@@ -38,6 +42,20 @@ export interface BankAccount {
   readonly currency: string;
   readonly status: AccountStatus;
   readonly createdAt: string;
+  readonly accountType: AccountType;
+  readonly accountName: string;       // in-game name (personal) or business entity name (business)
+  readonly initialDeposit: number;
+  readonly netWorth?: number;         // personal accounts only: total cash balance
+  readonly companyCapital?: number;   // business accounts only: company capital
+}
+
+export interface AccountCreationRequest {
+  readonly bankId: string;
+  readonly accountType: AccountType;
+  readonly accountName: string;
+  readonly initialDeposit: number;
+  readonly netWorth?: number;
+  readonly companyCapital?: number;
 }
 
 export const TRANSACTION_TYPES = [

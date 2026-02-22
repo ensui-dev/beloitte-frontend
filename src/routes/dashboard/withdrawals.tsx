@@ -1,12 +1,12 @@
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useSiteConfig } from "@/hooks/use-site-config";
-import { useAccount } from "@/hooks/use-account";
+import { useAccountContext } from "@/components/providers/account-provider";
 import { WithdrawForm } from "@/components/dashboard/withdraw-form";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function DashboardWithdrawals(): React.ReactElement {
   const { data: config, isLoading: configLoading } = useSiteConfig();
-  const { data: account, isLoading: accountLoading } = useAccount();
+  const { selectedAccount: account, isLoading: accountLoading } = useAccountContext();
 
   usePageTitle("Withdrawals", config?.bankName);
 

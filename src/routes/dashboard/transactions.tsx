@@ -1,6 +1,6 @@
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useSiteConfig } from "@/hooks/use-site-config";
-import { useAccount } from "@/hooks/use-account";
+import { useAccountContext } from "@/components/providers/account-provider";
 import { useTransactions } from "@/hooks/use-transactions";
 import {
   TransactionTable,
@@ -15,7 +15,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export function DashboardTransactions(): React.ReactElement {
   const { data: config } = useSiteConfig();
-  const { data: account } = useAccount();
+  const { selectedAccount: account } = useAccountContext();
   const { type, status, page, setType, setStatus, setPage } = useTransactionFilterParams();
 
   const { data: txResponse, isLoading } = useTransactions(account?.id, {

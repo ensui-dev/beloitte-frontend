@@ -50,6 +50,13 @@ export function AuthGuard({ requiredRole }: AuthGuardProps): React.ReactElement 
   }
 
   // At this point, state.status === "authenticated"
+
+  // New users without accounts must complete onboarding first.
+  // Allow access to /onboarding itself to avoid a redirect loop.
+  if (!state.session.hasAccounts && location.pathname !== "/onboarding") {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   if (requiredRole && state.session.activeRole !== requiredRole) {
     // User is authenticated but doesn't have the required role active.
     // Redirect to the default dashboard instead of showing a 403.

@@ -10,8 +10,16 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useSiteConfig } from "@/hooks/use-site-config";
-import { useIsAdmin } from "@/components/providers/auth-provider";
+import { useActiveRole } from "@/components/providers/auth-provider";
+import { useAccountContext } from "@/components/providers/account-provider";
 import {
   LayoutDashboard,
   ArrowLeftRight,
@@ -21,6 +29,11 @@ import {
   Palette,
   Settings,
   BarChart3,
+  User,
+  Building2,
+  Plus,
+  ChevronsUpDown,
+  Check,
 } from "lucide-react";
 
 interface NavItem {
@@ -29,7 +42,7 @@ interface NavItem {
   readonly icon: React.ComponentType<{ className?: string }>;
 }
 
-const PLAYER_NAV: readonly NavItem[] = [
+const USER_NAV: readonly NavItem[] = [
   { label: "Overview", href: "/dashboard/overview", icon: LayoutDashboard },
   { label: "Transactions", href: "/dashboard/transactions", icon: Receipt },
   { label: "Transfers", href: "/dashboard/transfers", icon: ArrowLeftRight },
@@ -45,7 +58,8 @@ const ADMIN_NAV: readonly NavItem[] = [
 
 export function DashboardSidebar(): React.ReactElement {
   const { data: config } = useSiteConfig();
-  const isAdmin = useIsAdmin();
+  const activeRole = useActiveRole();
+  const { accounts, selectedAccount, selectAccount } = useAccountContext();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -90,12 +104,90 @@ export function DashboardSidebar(): React.ReactElement {
       </SidebarHeader>
 
       <SidebarContent>
-        {renderNavGroup("Account", PLAYER_NAV)}
-
-        {isAdmin && (
+        {activeRole === "admin" ? (
+          /* ─── Admin view: only admin navigation ─── */
+          renderNavGroup("Administration", ADMIN_NAV)
+        ) : (
+          /* ─── User view: account switcher + user navigation ─── */
           <>
+            {/* Account switcher dropdown */}
+            {selectedAccount && (
+              <SidebarGroup>
+                <SidebarGroupLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Account
+                </SidebarGroupLabel>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <SidebarMenuButton
+                          className="w-full bg-white/[0.02] hover:bg-white/[0.05] data-[state=open]:bg-white/[0.05]"
+                          tooltip={selectedAccount.accountName}
+                        >
+                          {selectedAccount.accountType === "business" ? (
+                            <Building2 className="h-4 w-4 shrink-0" />
+                          ) : (
+                            <User className="h-4 w-4 shrink-0" />
+                          )}
+                          <div className="flex min-w-0 flex-1 flex-col">
+                            <span className="truncate text-sm font-medium">
+                              {selectedAccount.accountName}
+                            </span>
+                            <span className="truncate text-[10px] text-muted-foreground">
+                              {selectedAccount.accountNumber.slice(-8)}
+                            </span>
+                          </div>
+                          <ChevronsUpDown className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        </SidebarMenuButton>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        side="right"
+                        align="start"
+                        className="w-56 border-white/[0.06] bg-popover/90 backdrop-blur-xl"
+                      >
+                        {accounts.map((account) => {
+                          const isSelected = account.id === selectedAccount.id;
+                          return (
+                            <DropdownMenuItem
+                              key={account.id}
+                              onClick={() => selectAccount(account.id)}
+                              className="flex items-center gap-3"
+                            >
+                              {account.accountType === "business" ? (
+                                <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                              ) : (
+                                <User className="h-4 w-4 shrink-0 text-muted-foreground" />
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-sm">{account.accountName}</div>
+                                <div className="truncate text-[10px] text-muted-foreground">
+                                  {account.accountNumber.slice(-8)}
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
+                              )}
+                            </DropdownMenuItem>
+                          );
+                        })}
+                        <DropdownMenuSeparator className="bg-white/[0.06]" />
+                        <DropdownMenuItem
+                          onClick={() => navigate("/dashboard/accounts/new")}
+                          className="flex items-center gap-3"
+                        >
+                          <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          <span className="text-sm">New Account</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroup>
+            )}
+
             <SidebarSeparator className="bg-white/[0.06]" />
-            {renderNavGroup("Administration", ADMIN_NAV)}
+
+            {renderNavGroup("Navigation", USER_NAV)}
           </>
         )}
       </SidebarContent>

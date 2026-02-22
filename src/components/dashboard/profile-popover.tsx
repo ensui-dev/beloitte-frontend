@@ -20,7 +20,7 @@ function getInitials(name: string): string {
 
 /** Role label displayed under the username */
 const ROLE_LABELS: Record<UserRole, string> = {
-  player: "Player",
+  player: "User",
   admin: "Administrator",
 };
 
@@ -100,7 +100,7 @@ export function ProfilePopover(): React.ReactElement | null {
                     onClick={() => handleRoleSwitch("player")}
                     className="flex items-center justify-between"
                   >
-                    Player
+                    User
                     {activeRole === "player" && <Check className="h-3.5 w-3.5 text-primary" />}
                   </DropdownMenuItem>
                   <DropdownMenuItem

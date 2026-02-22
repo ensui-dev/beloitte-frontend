@@ -219,16 +219,42 @@ export const siteConfig: SiteConfig = {
   },
 };
 
-export const bankAccount: BankAccount = {
-  id: "acc-001",
-  userId: "user-001",
-  bankId: "demo-bank-001",
-  accountNumber: "DC12RVNB00000000424242",
-  balance: 15420.5,
-  currency: siteConfig.currency.code,
-  status: "active",
-  createdAt: "2025-06-15T00:00:00Z",
-};
+// ─── Multi-account mock data ──────────────────────────────────
+// The existing user has two accounts: a personal and a business.
+
+export const bankAccounts: readonly BankAccount[] = [
+  {
+    id: "acc-001",
+    userId: "user-001",
+    bankId: "demo-bank-001",
+    accountNumber: "DC12RVNB00000000424242",
+    balance: 15420.5,
+    currency: siteConfig.currency.code,
+    status: "active",
+    createdAt: "2025-06-15T00:00:00Z",
+    accountType: "personal",
+    accountName: "EnsuiDev",
+    initialDeposit: 5000,
+    netWorth: 25000,
+  },
+  {
+    id: "acc-002",
+    userId: "user-001",
+    bankId: "demo-bank-001",
+    accountNumber: "DC12RVNB00000000853791",
+    balance: 45000,
+    currency: siteConfig.currency.code,
+    status: "active",
+    createdAt: "2025-08-01T00:00:00Z",
+    accountType: "business",
+    accountName: "Ensui Enterprises",
+    initialDeposit: 20000,
+    companyCapital: 100000,
+  },
+] as const;
+
+/** @deprecated Use bankAccounts[0] — kept for backward compat during migration. */
+export const bankAccount: BankAccount = bankAccounts[0];
 
 export const transactions: readonly Transaction[] = [
   {
@@ -409,6 +435,23 @@ export const session: Session = {
   activeRole: "player",
   bankId: "demo-bank-001",
   accessToken: "mock-jwt-token-for-development",
+  hasAccounts: true,
+};
+
+/** Session for a brand-new user who hasn't set up any accounts yet. */
+export const newUserSession: Session = {
+  user: {
+    id: "user-002",
+    discordId: "987654321098765432",
+    discordUsername: "NewPlayer",
+    discordAvatar:
+      "https://cdn.discordapp.com/embed/avatars/1.png",
+    roles: ["player"],
+  },
+  activeRole: "player",
+  bankId: "demo-bank-001",
+  accessToken: "mock-jwt-token-new-user",
+  hasAccounts: false,
 };
 
 export const pendingTransaction: Transaction = {
