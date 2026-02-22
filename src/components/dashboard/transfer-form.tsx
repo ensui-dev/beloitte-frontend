@@ -67,10 +67,12 @@ interface TransferFormProps {
 }
 
 interface FormErrors {
-  toIban?: string;
-  amount?: string;
-  description?: string;
+  readonly toIban?: string;
+  readonly amount?: string;
+  readonly description?: string;
 }
+
+type TransferData = z.infer<typeof transferSchema>;
 
 export function TransferForm({ accountId, currency, balance }: TransferFormProps): React.ReactElement {
   const [ibanRaw, setIbanRaw] = useState("");
@@ -108,7 +110,7 @@ export function TransferForm({ accountId, currency, balance }: TransferFormProps
     });
 
     if (!parsed.success) {
-      const fieldErrors: FormErrors = {};
+      const fieldErrors: Partial<Record<keyof FormErrors, string>> = {};
       for (const issue of parsed.error.issues) {
         const field = issue.path[0] as keyof FormErrors;
         if (!fieldErrors[field]) {
@@ -119,12 +121,13 @@ export function TransferForm({ accountId, currency, balance }: TransferFormProps
       return;
     }
 
+    const data: TransferData = parsed.data;
     mutation.mutate({
       fromAccountId: accountId,
-      toIban: parsed.data.toIban as string,
-      amount: parsed.data.amount as number,
+      toIban: data.toIban,
+      amount: data.amount,
       currency: currency.code,
-      description: parsed.data.description as string | undefined,
+      description: data.description,
     });
   };
 

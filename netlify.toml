@@ -4,7 +4,6 @@
 
 [build.environment]
   VITE_MOCK_MODE = "true"
-  VITE_API_URL = "http://localhost:3001/api"
 
 # SPA routing - serve index.html for all non-file routes
 [[redirects]]
