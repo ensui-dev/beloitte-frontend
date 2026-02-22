@@ -419,6 +419,29 @@ export const pendingTransaction: Transaction = {
   createdAt: new Date().toISOString(),
 };
 
+export const pendingWithdrawal: Transaction = {
+  id: "tx-withdraw-001",
+  accountId: "acc-001",
+  type: "withdrawal",
+  amount: 0,
+  currency: siteConfig.currency.code,
+  description: "Pending withdrawal",
+  status: "pending",
+  createdAt: new Date().toISOString(),
+};
+
+export const bwiftHealth: import("./types").BwiftHealth = {
+  status: "operational",
+  latencyMs: 42,
+  lastChecked: new Date().toISOString(),
+};
+
+export const backendHealth: import("./types").BackendHealth = {
+  status: "ok",
+  version: "1.0.0-mock",
+  uptime: 86400,
+};
+
 /** Apply filters to mock transactions (simulates server-side filtering). */
 export function getFilteredTransactions(
   filters: import("./types").TransactionFilters

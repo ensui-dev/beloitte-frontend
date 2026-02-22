@@ -7,6 +7,7 @@ import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 import { DashboardOverview } from "@/routes/dashboard/overview";
 import { DashboardTransactions } from "@/routes/dashboard/transactions";
 import { DashboardTransfers } from "@/routes/dashboard/transfers";
+import { DashboardWithdrawals } from "@/routes/dashboard/withdrawals";
 import { AdminOverview } from "@/routes/dashboard/admin/overview";
 import { AdminSiteEditor } from "@/routes/dashboard/admin/site-editor";
 import { AdminTheme } from "@/routes/dashboard/admin/theme";
@@ -27,6 +28,7 @@ export function App(): React.ReactElement {
           <Route path="overview" element={<DashboardOverview />} />
           <Route path="transactions" element={<DashboardTransactions />} />
           <Route path="transfers" element={<DashboardTransfers />} />
+          <Route path="withdrawals" element={<DashboardWithdrawals />} />
 
           {/* Admin routes — requires admin role */}
           <Route element={<AuthGuard requiredRole="admin" />}>

@@ -6,110 +6,61 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2, Loader2, Send, AlertCircle, Building2 } from "lucide-react";
-import type { Transaction, TransferRequest } from "@/lib/data/types";
+import { CheckCircle2, Loader2, ArrowDownToLine, AlertCircle } from "lucide-react";
+import type { Transaction, WithdrawRequest } from "@/lib/data/types";
 import type { CurrencyConfig } from "@/lib/config/site-config-schema";
 import { formatCurrency } from "@/lib/config/currency-utils";
 
-// ─── BWIFT IBAN Utilities ───────────────────────────────────
-
-/**
- * BWIFT IBAN format: 2 letters (server) + 2 digits (check) + 4 letters (bank) + 14 digits (account)
- * Example: DC12RVNB00000000042069
- * Display: DC12 RVNB 0000 0000 0420 69
- */
-const BWIFT_IBAN_REGEX = /^[A-Z]{2}\d{2}[A-Z]{4}\d{14}$/;
-const BWIFT_IBAN_LENGTH = 22;
-
-/** Strip all spaces from an IBAN string. */
-function stripIban(value: string): string {
-  return value.replace(/\s/g, "").toUpperCase();
-}
-
-/** Format a raw IBAN into groups of 4 for display. */
-function formatIban(raw: string): string {
-  const clean = stripIban(raw);
-  return clean.replace(/(.{4})(?=.)/g, "$1 ");
-}
-
-/** Extract the 4-letter bank identifier from a valid IBAN. */
-function extractBankCode(iban: string): string {
-  return stripIban(iban).slice(4, 8);
-}
-
 // ─── Validation Schema ──────────────────────────────────────
 
-const transferSchema = z.object({
-  toIban: z
-    .string()
-    .min(1, "Recipient IBAN is required")
-    .transform(stripIban)
-    .pipe(
-      z
-        .string()
-        .length(BWIFT_IBAN_LENGTH, `IBAN must be exactly ${BWIFT_IBAN_LENGTH} characters`)
-        .regex(BWIFT_IBAN_REGEX, "Invalid BWIFT IBAN format")
-    ),
+const withdrawSchema = z.object({
   amount: z
     .number({ message: "Amount must be a number" })
     .positive("Amount must be greater than 0"),
   description: z.string().max(200, "Description is too long").optional(),
 });
 
+type WithdrawData = z.infer<typeof withdrawSchema>;
+
 // ─── Component ──────────────────────────────────────────────
 
-interface TransferFormProps {
+interface WithdrawFormProps {
   readonly accountId: string;
   readonly currency: CurrencyConfig;
   readonly balance?: number;
   /** When true, renders without the outer Card wrapper (for use inside a Dialog). */
   readonly compact?: boolean;
-  /** Called after a successful transfer submission. */
+  /** Called after a successful withdrawal submission. */
   readonly onSuccess?: () => void;
 }
 
 interface FormErrors {
-  readonly toIban?: string;
   readonly amount?: string;
   readonly description?: string;
 }
 
-type TransferData = z.infer<typeof transferSchema>;
-
-export function TransferForm({ accountId, currency, balance, compact = false, onSuccess }: TransferFormProps): React.ReactElement {
-  const [ibanRaw, setIbanRaw] = useState("");
+export function WithdrawForm({
+  accountId,
+  currency,
+  balance,
+  compact = false,
+  onSuccess,
+}: WithdrawFormProps): React.ReactElement {
   const [amountStr, setAmountStr] = useState("");
   const [description, setDescription] = useState("");
   const [errors, setErrors] = useState<FormErrors>({});
 
-  const mutation = useMutation<Transaction, Error, TransferRequest>({
-    mutationFn: (transfer) => dataService.createTransfer(transfer),
+  const mutation = useMutation<Transaction, Error, WithdrawRequest>({
+    mutationFn: (withdrawal) => dataService.createWithdrawal(withdrawal),
     onSuccess: () => onSuccess?.(),
   });
-
-  // Derive parsed state from raw input
-  const cleanIban = stripIban(ibanRaw);
-  const ibanValid = BWIFT_IBAN_REGEX.test(cleanIban);
-  const parsedBankCode = ibanValid ? extractBankCode(cleanIban) : null;
-
-  const handleIbanChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const raw = e.target.value;
-    // Allow only alphanumeric and spaces, cap at IBAN length + spaces
-    const filtered = raw.replace(/[^a-zA-Z0-9\s]/g, "");
-    const clean = stripIban(filtered);
-    if (clean.length <= BWIFT_IBAN_LENGTH) {
-      setIbanRaw(formatIban(clean));
-    }
-  };
 
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault();
     setErrors({});
 
-    const parsed = transferSchema.safeParse({
-      toIban: ibanRaw,
+    const parsed = withdrawSchema.safeParse({
       amount: amountStr === "" ? undefined : Number(amountStr),
       description: description.trim() || undefined,
     });
@@ -126,10 +77,16 @@ export function TransferForm({ accountId, currency, balance, compact = false, on
       return;
     }
 
-    const data: TransferData = parsed.data;
+    const data: WithdrawData = parsed.data;
+
+    // Client-side balance check
+    if (balance !== undefined && data.amount > balance) {
+      setErrors({ amount: "Insufficient funds" });
+      return;
+    }
+
     mutation.mutate({
       fromAccountId: accountId,
-      toIban: data.toIban,
       amount: data.amount,
       currency: currency.code,
       description: data.description,
@@ -137,7 +94,6 @@ export function TransferForm({ accountId, currency, balance, compact = false, on
   };
 
   const resetForm = (): void => {
-    setIbanRaw("");
     setAmountStr("");
     setDescription("");
     setErrors({});
@@ -153,9 +109,9 @@ export function TransferForm({ accountId, currency, balance, compact = false, on
           <CheckCircle2 className="h-8 w-8 text-emerald-400" />
         </div>
         <div className="text-center">
-          <h3 className="text-lg font-semibold">Transfer Submitted</h3>
+          <h3 className="text-lg font-semibold">Withdrawal Submitted</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Your transfer is being processed.
+            Your withdrawal is being processed.
           </p>
           {mutation.data.reference && (
             <p className="mt-2 font-mono text-xs text-muted-foreground">
@@ -164,7 +120,7 @@ export function TransferForm({ accountId, currency, balance, compact = false, on
           )}
         </div>
         <Button variant="outline" onClick={resetForm} className="mt-2">
-          Send Another Transfer
+          Make Another Withdrawal
         </Button>
       </div>
     );
@@ -173,7 +129,7 @@ export function TransferForm({ accountId, currency, balance, compact = false, on
 
     return (
       <Card className="mx-auto max-w-lg border-white/[0.06] bg-white/[0.02] backdrop-blur-sm">
-        <CardContent className="py-12">{successContent}</CardContent>
+        <CardContent>{successContent}</CardContent>
       </Card>
     );
   }
@@ -182,36 +138,10 @@ export function TransferForm({ accountId, currency, balance, compact = false, on
 
   const formContent = (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Recipient IBAN */}
-      <div className="space-y-2">
-        <Label htmlFor="iban">Recipient IBAN</Label>
-        <Input
-          id="iban"
-          placeholder="DC00 XXXX 0000 0000 0000 00"
-          value={ibanRaw}
-          onChange={handleIbanChange}
-          className="border-white/[0.06] bg-white/[0.02] font-mono tracking-wider"
-          aria-invalid={!!errors.toIban}
-          autoComplete="off"
-          spellCheck={false}
-        />
-        {errors.toIban && (
-          <p className="text-xs text-destructive">{errors.toIban}</p>
-        )}
-        {parsedBankCode && !errors.toIban && (
-          <div className="flex items-center gap-1.5 text-xs text-emerald-400">
-            <Building2 className="h-3 w-3" />
-            Bank identified: {parsedBankCode}
-          </div>
-        )}
-      </div>
-
-      <Separator className="bg-white/[0.06]" />
-
       {/* Amount */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="amount">Amount</Label>
+          <Label htmlFor="withdraw-amount">Amount</Label>
           {balance !== undefined && (
             <span className="text-xs text-muted-foreground">
               Available: {formatCurrency(balance, currency)}
@@ -223,7 +153,7 @@ export function TransferForm({ accountId, currency, balance, compact = false, on
             {currency.symbol}
           </span>
           <Input
-            id="amount"
+            id="withdraw-amount"
             type="number"
             step="0.01"
             min="0.01"
@@ -241,12 +171,12 @@ export function TransferForm({ accountId, currency, balance, compact = false, on
 
       {/* Description (optional) */}
       <div className="space-y-2">
-        <Label htmlFor="description">
+        <Label htmlFor="withdraw-description">
           Reference <span className="text-muted-foreground">(optional)</span>
         </Label>
         <Input
-          id="description"
-          placeholder="What is this transfer for?"
+          id="withdraw-description"
+          placeholder="What is this withdrawal for?"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           className="border-white/[0.06] bg-white/[0.02]"
@@ -277,12 +207,12 @@ export function TransferForm({ accountId, currency, balance, compact = false, on
         {mutation.isPending ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Sending...
+            Processing...
           </>
         ) : (
           <>
-            <Send className="mr-2 h-4 w-4" />
-            Send Transfer
+            <ArrowDownToLine className="mr-2 h-4 w-4" />
+            Withdraw Funds
           </>
         )}
       </Button>
@@ -294,9 +224,9 @@ export function TransferForm({ accountId, currency, balance, compact = false, on
   return (
     <Card className="mx-auto max-w-lg border-white/[0.06] bg-white/[0.02] backdrop-blur-sm">
       <CardHeader>
-        <CardTitle className="text-lg">Send a Transfer</CardTitle>
+        <CardTitle className="text-lg">Withdraw Funds</CardTitle>
         <CardDescription>
-          Transfer funds to any account in the BWIFT network.
+          Withdraw funds from your account.
         </CardDescription>
       </CardHeader>
       <CardContent>{formContent}</CardContent>

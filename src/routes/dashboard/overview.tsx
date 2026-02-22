@@ -1,23 +1,41 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useSiteConfig } from "@/hooks/use-site-config";
 import { useAccount } from "@/hooks/use-account";
 import { useTransactions } from "@/hooks/use-transactions";
+import { useBwiftHealth } from "@/hooks/use-bwift-health";
 import { formatCurrency } from "@/lib/config/currency-utils";
-import { StatCard, StatCardSkeleton } from "@/components/dashboard/stat-card";
 import { BalanceChart, BalanceChartSkeleton } from "@/components/dashboard/balance-chart";
 import {
   TransactionTable,
   TransactionTableSkeleton,
 } from "@/components/dashboard/transaction-table";
+import { TransferForm } from "@/components/dashboard/transfer-form";
+import { WithdrawForm } from "@/components/dashboard/withdraw-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  ArrowRight,
+  Send,
+  ArrowDownToLine,
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+} from "lucide-react";
 import type { Transaction } from "@/lib/data/types";
+import type { BwiftStatus } from "@/lib/data/types";
 
-/**
- * Compute income/expenses for the current month from transaction history.
- * Only counts completed transactions.
- */
+// ─── Monthly Stats ──────────────────────────────────────────
+
 function computeMonthlyStats(
   transactions: readonly Transaction[]
 ): { income: number; expenses: number } {
@@ -44,12 +62,90 @@ function computeMonthlyStats(
   return { income, expenses };
 }
 
+// ─── BWIFT Status Indicator ─────────────────────────────────
+
+const BWIFT_STATUS_CONFIG: Record<BwiftStatus, { readonly color: string; readonly label: string }> = {
+  operational: { color: "bg-emerald-400", label: "BWIFT Online" },
+  degraded: { color: "bg-amber-400", label: "BWIFT Degraded" },
+  outage: { color: "bg-red-400", label: "BWIFT Offline" },
+};
+
+function BwiftStatusIndicator(): React.ReactElement {
+  const { data: health, isLoading } = useBwiftHealth();
+
+  if (isLoading || !health) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="h-2 w-2 animate-pulse rounded-full bg-muted-foreground/50" />
+        Checking BWIFT...
+      </div>
+    );
+  }
+
+  const config = BWIFT_STATUS_CONFIG[health.status];
+
+  return (
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <div className="relative flex h-2 w-2">
+        {health.status === "operational" && (
+          <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${config.color} opacity-75`} />
+        )}
+        <span className={`relative inline-flex h-2 w-2 rounded-full ${config.color}`} />
+      </div>
+      {config.label}
+      <span className="text-muted-foreground/60">
+        {health.latencyMs}ms
+      </span>
+    </div>
+  );
+}
+
+// ─── Skeleton for the top cards ─────────────────────────────
+
+function TopCardsSkeleton(): React.ReactElement {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <Card className="border-white/[0.06] bg-white/[0.02] backdrop-blur-sm">
+        <CardContent className="p-6">
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="mt-3 h-9 w-40" />
+          <div className="mt-6 flex gap-8">
+            <div>
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="mt-1.5 h-5 w-24" />
+            </div>
+            <div>
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="mt-1.5 h-5 w-24" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      <Card className="border-white/[0.06] bg-white/[0.02] backdrop-blur-sm">
+        <CardContent className="flex flex-col justify-between p-6">
+          <Skeleton className="h-3 w-24" />
+          <div className="mt-4 flex gap-3">
+            <Skeleton className="h-10 flex-1" />
+            <Skeleton className="h-10 flex-1" />
+          </div>
+          <Skeleton className="mt-4 h-3 w-32" />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Overview Page ──────────────────────────────────────────
+
 export function DashboardOverview(): React.ReactElement {
   const { data: config } = useSiteConfig();
   const { data: account, isLoading: accountLoading } = useAccount();
   const { data: txResponse, isLoading: txLoading } = useTransactions(account?.id, {
-    pageSize: 100, // fetch enough for chart + stats computation
+    pageSize: 100,
   });
+
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
 
   usePageTitle("Overview", config?.bankName);
 
@@ -68,31 +164,79 @@ export function DashboardOverview(): React.ReactElement {
         </p>
       </div>
 
-      {/* Stats row */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        {isLoading || !config ? (
-          <>
-            <StatCardSkeleton />
-            <StatCardSkeleton />
-            <StatCardSkeleton />
-          </>
-        ) : (
-          <>
-            <StatCard
-              label="Balance"
-              value={formatCurrency(account?.balance ?? 0, config.currency)}
-            />
-            <StatCard
-              label="Income this month"
-              value={formatCurrency(stats.income, config.currency)}
-            />
-            <StatCard
-              label="Expenses this month"
-              value={formatCurrency(stats.expenses, config.currency)}
-            />
-          </>
-        )}
-      </div>
+      {/* Top cards row: Balance + Quick Actions */}
+      {isLoading || !config ? (
+        <TopCardsSkeleton />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {/* Balance Summary Card */}
+          <Card className="border-white/[0.06] bg-white/[0.02] backdrop-blur-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <Wallet className="h-3.5 w-3.5" />
+                Balance
+              </div>
+              <p className="mt-2 text-3xl font-semibold tracking-tight">
+                {formatCurrency(account?.balance ?? 0, config.currency)}
+              </p>
+
+              {/* Monthly debit/credit breakdown */}
+              <div className="mt-5 flex gap-8">
+                <div>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <TrendingUp className="h-3 w-3 text-emerald-400" />
+                    Credit this month
+                  </div>
+                  <p className="mt-1 text-sm font-medium text-emerald-400">
+                    +{formatCurrency(stats.income, config.currency)}
+                  </p>
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <TrendingDown className="h-3 w-3 text-red-400" />
+                    Debit this month
+                  </div>
+                  <p className="mt-1 text-sm font-medium text-red-400">
+                    -{formatCurrency(stats.expenses, config.currency)}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions Card */}
+          <Card className="border-white/[0.06] bg-white/[0.02] backdrop-blur-sm">
+            <CardContent className="flex h-full flex-col justify-between p-6">
+              <div className="text-xs font-medium text-muted-foreground">
+                Quick Actions
+              </div>
+
+              <div className="mt-4 flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-2 border-white/[0.06]"
+                  onClick={() => setTransferOpen(true)}
+                >
+                  <Send className="h-4 w-4" />
+                  Transfer
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-2 border-white/[0.06]"
+                  onClick={() => setWithdrawOpen(true)}
+                >
+                  <ArrowDownToLine className="h-4 w-4" />
+                  Withdraw
+                </Button>
+              </div>
+
+              <div className="mt-4">
+                <BwiftStatusIndicator />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Balance chart */}
       {isLoading || !config ? (
@@ -133,6 +277,48 @@ export function DashboardOverview(): React.ReactElement {
           )}
         </CardContent>
       </Card>
+
+      {/* ─── Transfer Modal ─────────────────────────────────── */}
+      <Dialog open={transferOpen} onOpenChange={setTransferOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send a Transfer</DialogTitle>
+            <DialogDescription>
+              Transfer funds to any account via the BWIFT network.
+            </DialogDescription>
+          </DialogHeader>
+          {config && account && (
+            <TransferForm
+              accountId={account.id}
+              currency={config.currency}
+              balance={account.balance}
+              compact
+              onSuccess={() => setTransferOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Withdraw Modal ─────────────────────────────────── */}
+      <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Withdraw Funds</DialogTitle>
+            <DialogDescription>
+              Withdraw funds from your account.
+            </DialogDescription>
+          </DialogHeader>
+          {config && account && (
+            <WithdrawForm
+              accountId={account.id}
+              currency={config.currency}
+              balance={account.balance}
+              compact
+              onSuccess={() => setWithdrawOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

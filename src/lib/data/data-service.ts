@@ -11,7 +11,7 @@
 import { apiClient } from "./api-client";
 import * as mockData from "./mock-data";
 import type { SiteConfig } from "@/lib/config/site-config-schema";
-import type { BankAccount, PaginatedResponse, Session, Transaction, TransactionFilters, TransferRequest } from "./types";
+import type { BackendHealth, BankAccount, BwiftHealth, PaginatedResponse, Session, Transaction, TransactionFilters, TransferRequest, WithdrawRequest } from "./types";
 
 function isMockMode(): boolean {
   return import.meta.env.VITE_MOCK_MODE === "true";
@@ -142,6 +142,36 @@ export const dataService = {
       () => apiClient.post<Transaction>("/transfers", transfer),
       () => mockData.pendingTransaction,
       "createTransfer"
+    );
+  },
+
+  // ─── Withdrawals ────────────────────────────────────────────
+
+  createWithdrawal(withdrawal: WithdrawRequest): Promise<Transaction> {
+    return fetchWithFallback(
+      () => apiClient.post<Transaction>("/withdrawals", withdrawal),
+      () => mockData.pendingWithdrawal,
+      "createWithdrawal"
+    );
+  },
+
+  // ─── BWIFT Network ──────────────────────────────────────────
+
+  getBwiftHealth(): Promise<BwiftHealth> {
+    return fetchWithFallback(
+      () => apiClient.get<BwiftHealth>("/bwift/health"),
+      () => mockData.bwiftHealth,
+      "bwiftHealth"
+    );
+  },
+
+  // ─── Backend Health ──────────────────────────────────────────
+
+  getBackendHealth(): Promise<BackendHealth> {
+    return fetchWithFallback(
+      () => apiClient.get<BackendHealth>("/health"),
+      () => mockData.backendHealth,
+      "backendHealth"
     );
   },
 

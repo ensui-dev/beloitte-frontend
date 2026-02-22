@@ -72,6 +72,32 @@ export interface TransferRequest {
   readonly description?: string;
 }
 
+export interface WithdrawRequest {
+  readonly fromAccountId: string;
+  readonly amount: number;
+  readonly currency: string;
+  readonly description?: string;
+}
+
+// ─── BWIFT Network ────────────────────────────────────────────
+
+export const BWIFT_STATUSES = ["operational", "degraded", "outage"] as const;
+export type BwiftStatus = (typeof BWIFT_STATUSES)[number];
+
+export interface BwiftHealth {
+  readonly status: BwiftStatus;
+  readonly latencyMs: number;
+  readonly lastChecked: string;
+}
+
+// ─── Backend Health ───────────────────────────────────────────
+
+export interface BackendHealth {
+  readonly status: "ok" | "error";
+  readonly version?: string;
+  readonly uptime?: number;
+}
+
 export interface TransactionFilters {
   readonly type?: TransactionType;
   readonly status?: TransactionStatus;

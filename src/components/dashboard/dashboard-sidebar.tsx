@@ -15,6 +15,7 @@ import { useIsAdmin } from "@/components/providers/auth-provider";
 import {
   LayoutDashboard,
   ArrowLeftRight,
+  ArrowDownToLine,
   Receipt,
   Globe,
   Palette,
@@ -32,6 +33,7 @@ const PLAYER_NAV: readonly NavItem[] = [
   { label: "Overview", href: "/dashboard/overview", icon: LayoutDashboard },
   { label: "Transactions", href: "/dashboard/transactions", icon: Receipt },
   { label: "Transfers", href: "/dashboard/transfers", icon: ArrowLeftRight },
+  { label: "Withdrawals", href: "/dashboard/withdrawals", icon: ArrowDownToLine },
 ];
 
 const ADMIN_NAV: readonly NavItem[] = [
