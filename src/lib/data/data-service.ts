@@ -20,13 +20,32 @@ function isMockMode(): boolean {
 // ─── Mock Persistence (localStorage) ──────────────────────────
 // In mock mode, site config edits are persisted to localStorage so
 // changes survive page reloads and are visible on the landing page.
+//
+// A version key tracks mock-data.ts changes. When the default mock
+// data changes (e.g. new preset names, fixed CTA text), stale
+// localStorage is automatically discarded so users see fresh defaults.
 
 const MOCK_CONFIG_KEY = "beloitte:mock-site-config";
+const MOCK_VERSION_KEY = "beloitte:mock-version";
+
+/**
+ * Bump this any time mock-data.ts defaults change in a way that
+ * should invalidate users' saved localStorage state.
+ */
+const MOCK_DATA_VERSION = "3";
 
 function getMockSiteConfig(): SiteConfig {
   if (!isMockMode()) return mockData.siteConfig;
 
   try {
+    const storedVersion = localStorage.getItem(MOCK_VERSION_KEY);
+    if (storedVersion !== MOCK_DATA_VERSION) {
+      // Stale data from an older mock version — discard it
+      localStorage.removeItem(MOCK_CONFIG_KEY);
+      localStorage.setItem(MOCK_VERSION_KEY, MOCK_DATA_VERSION);
+      return mockData.siteConfig;
+    }
+
     const stored = localStorage.getItem(MOCK_CONFIG_KEY);
     if (stored) {
       return JSON.parse(stored) as SiteConfig;
@@ -42,6 +61,7 @@ function setMockSiteConfig(config: SiteConfig): void {
 
   try {
     localStorage.setItem(MOCK_CONFIG_KEY, JSON.stringify(config));
+    localStorage.setItem(MOCK_VERSION_KEY, MOCK_DATA_VERSION);
   } catch {
     // Storage full or unavailable — silently ignore
   }

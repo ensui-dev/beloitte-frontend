@@ -30,6 +30,15 @@ export function themeColorsToCssVars(
     "--card-foreground": colors.cardForeground,
     "--popover": colors.popover,
     "--popover-foreground": colors.popoverForeground,
+    // Sidebar colors — derived from main theme so sidebar stays in sync.
+    "--sidebar": colors.card,
+    "--sidebar-foreground": colors.cardForeground,
+    "--sidebar-primary": colors.primary,
+    "--sidebar-primary-foreground": colors.primaryForeground,
+    "--sidebar-accent": colors.accent,
+    "--sidebar-accent-foreground": colors.accentForeground,
+    "--sidebar-border": colors.border,
+    "--sidebar-ring": colors.ring,
   };
 }
 

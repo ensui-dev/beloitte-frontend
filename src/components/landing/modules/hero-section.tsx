@@ -1,25 +1,103 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ImageIcon } from "lucide-react";
 import type { HeroConfig } from "@/lib/config/site-config-schema";
 
 interface HeroSectionProps {
   readonly config: HeroConfig;
 }
 
+/**
+ * Gradient variant — bold primary-colored radial glow with a vertical fade.
+ * More dramatic than a plain dark background.
+ */
+function GradientBackground(): React.ReactElement {
+  return (
+    <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.08] via-primary/[0.02] to-transparent" />
+      <div className="absolute top-[-20%] left-1/2 h-[700px] w-[900px] -translate-x-1/2 rounded-full bg-primary/[0.12] blur-[120px]" />
+      <div className="absolute top-[10%] right-[-10%] h-[500px] w-[500px] rounded-full bg-primary/[0.07] blur-[100px]" />
+    </div>
+  );
+}
+
+/**
+ * Image variant — full-bleed background image with a dark gradient overlay.
+ * Falls back to a placeholder state when no image URL is provided.
+ */
+function ImageBackground({
+  src,
+}: {
+  readonly src: string | undefined;
+}): React.ReactElement {
+  if (!src) {
+    return (
+      <div className="absolute inset-0 z-0">
+        {/* Placeholder pattern when no image URL is set */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.06] via-background to-primary/[0.04]" />
+        <div className="absolute inset-0 flex items-center justify-center opacity-[0.06]">
+          <ImageIcon className="h-48 w-48" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="absolute inset-0 z-0">
+      <img
+        src={src}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+      {/* Dark overlay for text readability */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background" />
+    </div>
+  );
+}
+
+/**
+ * Particles variant — CSS-only animated floating dots.
+ * Uses radial-gradient dots with upward float animation plus larger accent orbs.
+ */
+function ParticlesBackground(): React.ReactElement {
+  return (
+    <div className="absolute inset-0 z-0 overflow-hidden">
+      {/* Soft ambient glow behind content */}
+      <div className="absolute top-[10%] left-1/2 h-[500px] w-[700px] -translate-x-1/2 rounded-full bg-primary/[0.06] blur-[120px]" />
+
+      {/* Particle field — the animated dots */}
+      <div className="hero-particles absolute inset-0" />
+    </div>
+  );
+}
+
+/**
+ * Resolves the correct background based on the config variant.
+ */
+function HeroBackground({
+  config,
+}: {
+  readonly config: HeroConfig;
+}): React.ReactElement {
+  switch (config.backgroundVariant) {
+    case "image":
+      return <ImageBackground src={config.backgroundImage} />;
+    case "particles":
+      return <ParticlesBackground />;
+    case "gradient":
+    default:
+      return <GradientBackground />;
+  }
+}
+
 export function HeroSection({ config }: HeroSectionProps): React.ReactElement {
   const isCenter = config.alignment === "center";
 
   return (
-    <div className="relative overflow-hidden">
-      {/* Atmospheric gradient — two soft blobs that give the hero depth */}
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.04] via-transparent to-transparent" />
-        <div className="absolute top-[-20%] left-1/2 h-[700px] w-[900px] -translate-x-1/2 rounded-full bg-primary/[0.07] blur-[120px]" />
-        <div className="absolute top-[10%] right-[-10%] h-[400px] w-[400px] rounded-full bg-primary/[0.04] blur-[100px]" />
-      </div>
+    <div className="relative isolate overflow-hidden">
+      <HeroBackground config={config} />
 
       <div
-        className={`mx-auto flex max-w-7xl flex-col gap-8 px-6 pb-20 pt-24 md:pt-32 ${
+        className={`relative z-10 mx-auto flex max-w-7xl flex-col gap-8 px-6 pb-20 pt-24 md:pt-32 ${
           isCenter ? "items-center text-center" : "items-start"
         }`}
       >

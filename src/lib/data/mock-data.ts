@@ -96,18 +96,21 @@ export const siteConfig: SiteConfig = {
             quote:
               "RNB made managing my business finances effortless. The transfers are instant.",
             author: "MarbleCorp",
+            avatar: "https://media.licdn.com/dms/image/v2/D4E22AQFSMt_xcHSuOA/feedshare-shrink_800/B4EZbOp16CHIAo-/0/1747223798241?e=2147483647&v=beta&t=mzRhon8wKOxEjEANUiIhkSryi7O9PO6dAz3pQQ-A2eM",
             role: "Business Owner",
           },
           {
             quote:
               "Finally a bank that doesn't feel like it's from 2005. Clean, modern, and fast.",
             author: "SkyTrader_42",
+            avatar: "https://i.pinimg.com/736x/18/88/db/1888dbfd156722944399fa530be519c9.jpg",
             role: "Frequent Trader",
           },
           {
             quote:
               "The dashboard gives me everything I need at a glance. Highly recommend.",
-            author: "CityMayor_DC",
+              author: "CityMayor_DC",
+              avatar: "https://s.namemc.com/3d/skin/body.png?id=8019c1b57762fc6c&model=classic&width=308&height=308",
             role: "Government Official",
           },
         ],
@@ -196,7 +199,7 @@ export const siteConfig: SiteConfig = {
       popoverForeground: "oklch(0.985 0 0)",
     },
     fonts: {
-      heading: "General Sans",
+      heading: "Inter",
       body: "Plus Jakarta Sans",
     },
     borderRadius: "0.625rem",

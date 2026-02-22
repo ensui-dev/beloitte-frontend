@@ -245,7 +245,7 @@ export const themeConfigSchema = z.object({
   preset: z.string().optional(),
   colors: themeColorsSchema,
   fonts: z.object({
-    heading: z.string().min(1).default("General Sans"),
+    heading: z.string().min(1).default("Inter"),
     body: z.string().min(1).default("Plus Jakarta Sans"),
   }),
   borderRadius: z.string().min(1).default("0.625rem"),
