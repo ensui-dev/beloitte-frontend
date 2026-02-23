@@ -12,15 +12,16 @@
  * If the user is already authenticated, they're redirected to the dashboard.
  */
 import { useState } from "react";
-import { Navigate, useLocation } from "react-router";
+import { Link, Navigate, useLocation, useSearchParams } from "react-router";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useSiteConfig } from "@/hooks/use-site-config";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { ThemeProvider } from "@/components/theme/theme-provider";
 import { redirectToDiscordLogin } from "@/lib/auth/discord";
 import { seedMockAccounts } from "@/lib/data/data-service";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LogIn, Bug, Database, Shield, Zap } from "lucide-react";
+import { LogIn, Bug, Database, Shield, Zap, ArrowLeft } from "lucide-react";
 
 const IS_MOCK_MODE = import.meta.env.VITE_MOCK_MODE === "true";
 
@@ -33,9 +34,12 @@ const DISCORD_COLOR = "#5865F2";
 export function LoginPage(): React.ReactElement {
   const { state, handleLoginToken } = useAuth();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { data: config } = useSiteConfig();
   const [mockLoading, setMockLoading] = useState(false);
   const [mockError, setMockError] = useState<string | null>(null);
+
+  const intent = searchParams.get("intent");
 
   usePageTitle("Sign In", config?.bankName);
 
@@ -43,7 +47,12 @@ export function LoginPage(): React.ReactElement {
   if (state.status === "authenticated") {
     // New users (no accounts) always go to onboarding first
     if (!state.session.hasAccounts) {
-      return <Navigate to="/onboarding" replace />;
+      const onboardingUrl = intent ? `/onboarding?intent=${intent}` : "/onboarding";
+      return <Navigate to={onboardingUrl} replace />;
+    }
+    // Existing users with a business intent go to add-account
+    if (intent === "business") {
+      return <Navigate to="/dashboard/accounts/new?type=business" replace />;
     }
     const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? "/dashboard";
     return <Navigate to={from} replace />;
@@ -77,7 +86,7 @@ export function LoginPage(): React.ReactElement {
     );
   }
 
-  return (
+  const page = (
     <div className="relative flex min-h-screen items-center justify-center bg-background">
       {/* Atmospheric background glow */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
@@ -113,7 +122,7 @@ export function LoginPage(): React.ReactElement {
             className="w-full text-white shadow-lg shadow-[#5865F2]/20 transition-shadow hover:shadow-[#5865F2]/30"
             size="lg"
             style={{ backgroundColor: DISCORD_COLOR }}
-            onClick={redirectToDiscordLogin}
+            onClick={() => redirectToDiscordLogin(intent ?? undefined)}
           >
             <LogIn className="mr-2 h-5 w-5" />
             Continue with Discord
@@ -190,7 +199,22 @@ export function LoginPage(): React.ReactElement {
             <span>Instant access</span>
           </div>
         </div>
+
+        {/* Back to landing */}
+        <div className="mt-6 text-center">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Back to home
+          </Link>
+        </div>
       </div>
     </div>
   );
+
+  // Apply bank theme — login is outside DashboardLayout so needs its own ThemeProvider
+  if (!config) return page;
+  return <ThemeProvider theme={config.theme}>{page}</ThemeProvider>;
 }

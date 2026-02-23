@@ -14,6 +14,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Navigate, useSearchParams } from "react-router";
 import { useAuth } from "@/components/providers/auth-provider";
+import { consumeAuthIntent } from "@/lib/auth/discord";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, Loader2 } from "lucide-react";
@@ -61,11 +62,19 @@ export function AuthCallbackPage(): React.ReactElement {
   }, [searchParams, handleLoginToken]);
 
   if (callbackState === "success") {
-    // New users (no accounts) go to onboarding; existing users go to dashboard
-    const destination =
-      authState.status === "authenticated" && !authState.session.hasAccounts
-        ? "/onboarding"
-        : "/dashboard";
+    // Recover the intent stored before the OAuth redirect (one-time read)
+    const intent = consumeAuthIntent();
+    const isNewUser = authState.status === "authenticated" && !authState.session.hasAccounts;
+
+    let destination: string;
+    if (isNewUser) {
+      destination = intent ? `/onboarding?intent=${intent}` : "/onboarding";
+    } else if (intent === "business") {
+      destination = "/dashboard/accounts/new?type=business";
+    } else {
+      destination = "/dashboard";
+    }
+
     return <Navigate to={destination} replace />;
   }
 

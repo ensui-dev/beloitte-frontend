@@ -137,6 +137,41 @@ export interface Bank {
   readonly createdAt: string;
 }
 
+// ─── Admin Stats ──────────────────────────────────────────────
+
+export interface AdminStats {
+  readonly totalAccounts: number;
+  readonly totalBalance: number;
+  readonly totalTransactions: number;
+  readonly activeAccountsChange: number;
+  readonly balanceChange: number;
+  readonly transactionsChange: number;
+}
+
+export interface VolumeDataPoint {
+  readonly date: string;
+  readonly deposits: number;
+  readonly withdrawals: number;
+  readonly transfers: number;
+}
+
+export const ACTIVITY_EVENT_TYPES = [
+  "account_created",
+  "transfer",
+  "deposit",
+  "withdrawal",
+  "config_change",
+] as const;
+export type ActivityEventType = (typeof ACTIVITY_EVENT_TYPES)[number];
+
+export interface ActivityEvent {
+  readonly id: string;
+  readonly type: ActivityEventType;
+  readonly description: string;
+  readonly actor: string;
+  readonly createdAt: string;
+}
+
 // ─── Paginated Response ────────────────────────────────────────
 
 export interface PaginatedResponse<T> {

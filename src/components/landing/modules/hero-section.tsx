@@ -1,6 +1,15 @@
+import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, ImageIcon } from "lucide-react";
 import type { HeroConfig } from "@/lib/config/site-config-schema";
+
+/** Use React Router Link for internal hrefs, plain <a> for external/anchor links. */
+function HeroLink({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }): React.ReactElement {
+  if (href.startsWith("/")) {
+    return <Link to={href} {...props}>{children}</Link>;
+  }
+  return <a href={href} {...props}>{children}</a>;
+}
 
 interface HeroSectionProps {
   readonly config: HeroConfig;
@@ -110,14 +119,14 @@ export function HeroSection({ config }: HeroSectionProps): React.ReactElement {
           </p>
           <div className={`flex flex-wrap gap-3 pt-2 ${isCenter ? "justify-center" : ""}`}>
             <Button size="lg" asChild>
-              <a href={config.ctaLink}>{config.ctaText}</a>
+              <HeroLink href={config.ctaLink}>{config.ctaText}</HeroLink>
             </Button>
             {config.secondaryCtaText && config.secondaryCtaLink && (
               <Button size="lg" variant="outline" asChild className="group border-white/[0.08] bg-white/[0.03] backdrop-blur-sm">
-                <a href={config.secondaryCtaLink}>
+                <HeroLink href={config.secondaryCtaLink}>
                   {config.secondaryCtaText}
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                </a>
+                </HeroLink>
               </Button>
             )}
           </div>

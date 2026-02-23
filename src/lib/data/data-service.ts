@@ -11,7 +11,7 @@
 import { apiClient } from "./api-client";
 import * as mockData from "./mock-data";
 import type { SiteConfig } from "@/lib/config/site-config-schema";
-import type { AccountCreationRequest, BackendHealth, BankAccount, BwiftHealth, PaginatedResponse, Session, Transaction, TransactionFilters, TransferRequest, WithdrawRequest } from "./types";
+import type { AccountCreationRequest, ActivityEvent, AdminStats, BackendHealth, Bank, BankAccount, BwiftHealth, PaginatedResponse, Session, Transaction, TransactionFilters, TransferRequest, VolumeDataPoint, WithdrawRequest } from "./types";
 
 function isMockMode(): boolean {
   return import.meta.env.VITE_MOCK_MODE === "true";
@@ -32,7 +32,7 @@ const MOCK_VERSION_KEY = "beloitte:mock-version";
  * Bump this any time mock-data.ts defaults change in a way that
  * should invalidate users' saved localStorage state.
  */
-const MOCK_DATA_VERSION = "5";
+const MOCK_DATA_VERSION = "7";
 
 function getMockSiteConfig(): SiteConfig {
   if (!isMockMode()) return mockData.siteConfig;
@@ -303,6 +303,40 @@ export const dataService = {
       () => apiClient.post<void>("/auth/logout", {}),
       () => undefined,
       "logout"
+    );
+  },
+
+  // ─── Admin ──────────────────────────────────────────────────
+
+  getAdminStats(): Promise<AdminStats> {
+    return fetchWithFallback(
+      () => apiClient.get<AdminStats>("/admin/stats"),
+      () => mockData.adminStats,
+      "adminStats"
+    );
+  },
+
+  getVolumeHistory(days = 30): Promise<readonly VolumeDataPoint[]> {
+    return fetchWithFallback(
+      () => apiClient.get<readonly VolumeDataPoint[]>(`/admin/volume?days=${days}`),
+      () => mockData.volumeHistory.slice(-days),
+      "volumeHistory"
+    );
+  },
+
+  getActivityFeed(limit = 10): Promise<readonly ActivityEvent[]> {
+    return fetchWithFallback(
+      () => apiClient.get<readonly ActivityEvent[]>(`/admin/activity?limit=${limit}`),
+      () => mockData.activityFeed.slice(0, limit),
+      "activityFeed"
+    );
+  },
+
+  getBank(): Promise<Bank> {
+    return fetchWithFallback(
+      () => apiClient.get<Bank>("/admin/bank"),
+      () => mockData.bank,
+      "bank"
     );
   },
 } as const;

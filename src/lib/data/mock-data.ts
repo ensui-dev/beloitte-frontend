@@ -6,7 +6,7 @@
  * The data-service.ts layer ensures this by checking VITE_MOCK_MODE.
  */
 import type { SiteConfig } from "@/lib/config/site-config-schema";
-import type { BankAccount, PaginatedResponse, Session, Transaction } from "./types";
+import type { ActivityEvent, AdminStats, Bank, BankAccount, PaginatedResponse, Session, Transaction, VolumeDataPoint } from "./types";
 
 export const siteConfig: SiteConfig = {
   bankId: "demo-bank-001",
@@ -30,7 +30,7 @@ export const siteConfig: SiteConfig = {
         ctaText: "Get Started with Discord",
         ctaLink: "/login",
         secondaryCtaText: "For Businesses",
-        secondaryCtaLink: "#business",
+        secondaryCtaLink: "/login?intent=business",
         showDashboardPreview: true,
         backgroundVariant: "gradient",
         alignment: "center",
@@ -214,7 +214,7 @@ export const siteConfig: SiteConfig = {
     ctaText: "Sign up",
     ctaLink: "/login",
     links: [
-      { label: "Business", href: "#business" },
+      { label: "Business", href: "/login?intent=business" },
     ],
   },
 };
@@ -510,3 +510,108 @@ export function getFilteredTransactions(
 
   return { data, total, page, pageSize };
 }
+
+// ─── Admin Data ──────────────────────────────────────────────
+
+export const bank: Bank = {
+  id: "demo-bank-001",
+  name: "Reveille National Bank",
+  slug: "reveille",
+  bankCode: "RVNB",
+  status: "active",
+  createdAt: "2025-01-01T00:00:00Z",
+};
+
+export const adminStats: AdminStats = {
+  totalAccounts: 247,
+  totalBalance: 1_843_290.5,
+  totalTransactions: 12_847,
+  activeAccountsChange: 8.3,
+  balanceChange: 12.7,
+  transactionsChange: -2.1,
+};
+
+/** 30 days of mock transaction volume data. */
+export const volumeHistory: readonly VolumeDataPoint[] = (() => {
+  const points: VolumeDataPoint[] = [];
+  const now = new Date();
+
+  for (let i = 29; i >= 0; i--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    const dateKey = date.toISOString().split("T")[0];
+
+    // Weekdays get more volume, weekends less
+    const dayOfWeek = date.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const base = isWeekend ? 0.5 : 1;
+
+    points.push({
+      date: dateKey,
+      deposits: Math.round((3000 + Math.random() * 5000) * base),
+      withdrawals: Math.round((1500 + Math.random() * 3000) * base),
+      transfers: Math.round((2000 + Math.random() * 4000) * base),
+    });
+  }
+
+  return points;
+})();
+
+export const activityFeed: readonly ActivityEvent[] = [
+  {
+    id: "evt-001",
+    type: "account_created",
+    description: "New business account opened: MarbleCorp Trading",
+    actor: "MarbleCorp",
+    createdAt: "2026-02-23T09:15:00Z",
+  },
+  {
+    id: "evt-002",
+    type: "transfer",
+    description: "Large transfer: RED $25,000 to First National DC",
+    actor: "EnsuiDev",
+    createdAt: "2026-02-23T08:42:00Z",
+  },
+  {
+    id: "evt-003",
+    type: "deposit",
+    description: "Government payroll batch: 15 deposits processed",
+    actor: "System",
+    createdAt: "2026-02-22T14:00:00Z",
+  },
+  {
+    id: "evt-004",
+    type: "config_change",
+    description: "Site theme updated to dark-fintech preset",
+    actor: "EnsuiDev",
+    createdAt: "2026-02-22T11:30:00Z",
+  },
+  {
+    id: "evt-005",
+    type: "account_created",
+    description: "New personal account opened",
+    actor: "SkyTrader_42",
+    createdAt: "2026-02-21T16:20:00Z",
+  },
+  {
+    id: "evt-006",
+    type: "withdrawal",
+    description: "Withdrawal: RED $5,000 from Ensui Enterprises",
+    actor: "EnsuiDev",
+    createdAt: "2026-02-21T10:05:00Z",
+  },
+  {
+    id: "evt-007",
+    type: "transfer",
+    description: "Inter-bank transfer via BWIFT: RED $8,500",
+    actor: "CityMayor_DC",
+    createdAt: "2026-02-20T15:45:00Z",
+  },
+  {
+    id: "evt-008",
+    type: "config_change",
+    description: "Navigation links updated",
+    actor: "EnsuiDev",
+    createdAt: "2026-02-20T09:00:00Z",
+  },
+];

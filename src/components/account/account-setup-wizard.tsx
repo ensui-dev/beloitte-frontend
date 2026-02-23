@@ -24,15 +24,18 @@ interface AccountSetupWizardProps {
   readonly title?: string;
   /** Optional subheading override. */
   readonly description?: string;
+  /** Pre-select account type and skip the type-selection step. */
+  readonly initialAccountType?: AccountType;
 }
 
 export function AccountSetupWizard({
   onComplete,
   title = "Set up your account",
   description = "Choose the type of account you'd like to open.",
+  initialAccountType,
 }: AccountSetupWizardProps): React.ReactElement {
-  const [step, setStep] = useState<WizardStep>("type");
-  const [accountType, setAccountType] = useState<AccountType | null>(null);
+  const [step, setStep] = useState<WizardStep>(initialAccountType ? "details" : "type");
+  const [accountType, setAccountType] = useState<AccountType | null>(initialAccountType ?? null);
   const [createdAccount, setCreatedAccount] = useState<BankAccount | null>(null);
 
   // Step 1: Type selection

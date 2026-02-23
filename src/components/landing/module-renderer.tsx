@@ -3,6 +3,7 @@
  * Only renders visible modules. Skips unregistered types with a warning.
  */
 import { getModule, isRegistered } from "@/lib/config/module-registry";
+import { ErrorBoundary } from "@/components/error-boundary";
 import type { ModuleInstance } from "@/lib/config/site-config-schema";
 
 interface ModuleRendererProps {
@@ -35,7 +36,9 @@ export function ModuleRenderer({
               key={moduleInstance.id}
               id={`section-${moduleInstance.type}`}
             >
-              <Component config={moduleInstance.config} />
+              <ErrorBoundary label={`${moduleInstance.type} section`}>
+                <Component config={moduleInstance.config} />
+              </ErrorBoundary>
             </section>
           );
         })}

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { z } from "zod";
+import { toast } from "sonner";
 import { dataService } from "@/lib/data/data-service";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -86,7 +87,15 @@ export function TransferForm({ accountId, currency, balance, compact = false, on
 
   const mutation = useMutation<Transaction, Error, TransferRequest>({
     mutationFn: (transfer) => dataService.createTransfer(transfer),
-    onSuccess: () => onSuccess?.(),
+    onSuccess: (tx) => {
+      toast.success("Transfer submitted", {
+        description: tx.reference ? `Ref: ${tx.reference}` : undefined,
+      });
+      onSuccess?.();
+    },
+    onError: (error) => {
+      toast.error("Transfer failed", { description: error.message });
+    },
   });
 
   // Derive parsed state from raw input

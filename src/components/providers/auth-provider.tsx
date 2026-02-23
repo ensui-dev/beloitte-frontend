@@ -58,6 +58,8 @@ interface AuthContextValue {
   readonly logout: () => Promise<void>;
   /** Switch active role (player ↔ admin). Only works when authenticated. */
   readonly switchRole: (role: UserRole) => void;
+  /** Re-fetch session from the server and update local state. */
+  readonly refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -135,9 +137,18 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
     });
   }, []);
 
+  const refreshSession = useCallback(async (): Promise<void> => {
+    try {
+      const session = await dataService.getSession();
+      setState({ status: "authenticated", session });
+    } catch {
+      // If refresh fails, don't disrupt the current state
+    }
+  }, []);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ state, handleLoginToken, logout, switchRole }),
-    [state, handleLoginToken, logout, switchRole]
+    () => ({ state, handleLoginToken, logout, switchRole, refreshSession }),
+    [state, handleLoginToken, logout, switchRole, refreshSession]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

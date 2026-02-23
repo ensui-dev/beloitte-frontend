@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { BrowserRouter } from "react-router";
 import { App } from "./App";
 import { AuthProvider } from "@/components/providers/auth-provider";
+import { ErrorBoundary } from "@/components/error-boundary";
 import "./index.css";
 
 // Side-effect import: registers all landing page modules into the registry.
@@ -35,7 +36,9 @@ createRoot(rootElement).render(
       <TooltipProvider>
         <BrowserRouter>
           <AuthProvider>
-            <App />
+            <ErrorBoundary label="Application">
+              <App />
+            </ErrorBoundary>
             <Toaster />
           </AuthProvider>
         </BrowserRouter>

@@ -75,6 +75,7 @@ export function TransactionTable({
   }
 
   return (
+    <div className="overflow-x-auto -mx-2 px-2">
     <Table>
       <TableHeader>
         <TableRow className="border-white/[0.06] hover:bg-transparent">
@@ -132,6 +133,7 @@ export function TransactionTable({
         })}
       </TableBody>
     </Table>
+    </div>
   );
 }
 

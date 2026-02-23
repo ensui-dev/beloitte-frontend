@@ -12,15 +12,40 @@
  *
  * This means the frontend NEVER handles Discord's client secret
  * or authorization codes directly — only the resulting JWT.
+ *
+ * The optional `intent` parameter (e.g. "business") is persisted to
+ * localStorage before the redirect so it survives the OAuth round-trip.
+ * The auth callback page reads it back via `consumeAuthIntent()`.
  */
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001/api";
+
+/** localStorage key for persisting auth intent across the OAuth redirect. */
+const INTENT_KEY = "beloitte:auth-intent";
 
 /**
  * Redirect the browser to the backend's Discord OAuth endpoint.
  * The backend handles the full OAuth2 dance and redirects back
  * to /auth/callback with the JWT token.
+ *
+ * @param intent Optional intent to carry through the OAuth flow (e.g. "business").
+ *               Stored in localStorage since the OAuth redirect leaves the SPA.
  */
-export function redirectToDiscordLogin(): void {
+export function redirectToDiscordLogin(intent?: string): void {
+  if (intent) {
+    localStorage.setItem(INTENT_KEY, intent);
+  } else {
+    localStorage.removeItem(INTENT_KEY);
+  }
   window.location.href = `${API_URL}/auth/discord`;
+}
+
+/**
+ * Read and clear the stored auth intent (one-time consume).
+ * Returns null if no intent was stored.
+ */
+export function consumeAuthIntent(): string | null {
+  const intent = localStorage.getItem(INTENT_KEY);
+  localStorage.removeItem(INTENT_KEY);
+  return intent;
 }

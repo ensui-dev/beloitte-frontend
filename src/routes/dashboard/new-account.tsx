@@ -5,7 +5,7 @@
  * the dashboard layout. On completion, selects the new account and
  * navigates to the overview page.
  */
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { useCallback } from "react";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useAccountContext } from "@/components/providers/account-provider";
@@ -14,7 +14,11 @@ import type { BankAccount } from "@/lib/data/types";
 
 export function NewAccountPage(): React.ReactElement {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { selectAccount } = useAccountContext();
+
+  // ?type=business pre-selects business account creation (e.g. from "For Business" CTA)
+  const isBusiness = searchParams.get("type") === "business";
 
   usePageTitle("New Account");
 
@@ -30,8 +34,13 @@ export function NewAccountPage(): React.ReactElement {
     <div className="mx-auto max-w-lg py-8">
       <AccountSetupWizard
         onComplete={handleComplete}
-        title="Open a new account"
-        description="Add another personal or business account to your profile."
+        title={isBusiness ? "Open a business account" : "Open a new account"}
+        description={
+          isBusiness
+            ? "Tell us about your business to get started."
+            : "Add another personal or business account to your profile."
+        }
+        initialAccountType={isBusiness ? "business" : undefined}
       />
     </div>
   );

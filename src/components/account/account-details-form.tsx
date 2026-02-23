@@ -8,6 +8,7 @@
  */
 import { useState } from "react";
 import { z } from "zod";
+import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -104,7 +105,15 @@ export function AccountDetailsForm({
       },
       {
         onSuccess: (account) => {
+          toast.success("Account created", {
+            description: account.accountName
+              ? `"${account.accountName}" is ready to use.`
+              : undefined,
+          });
           onSuccess(account);
+        },
+        onError: (error) => {
+          toast.error("Account creation failed", { description: error.message });
         },
       }
     );

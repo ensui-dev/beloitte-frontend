@@ -4,6 +4,7 @@ import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DashboardTopbar } from "@/components/dashboard/dashboard-topbar";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { AccountProvider } from "@/components/providers/account-provider";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { useSiteConfig } from "@/hooks/use-site-config";
 
 export function DashboardLayout(): React.ReactElement {
@@ -18,7 +19,9 @@ export function DashboardLayout(): React.ReactElement {
           <SidebarInset>
             <DashboardTopbar />
             <main className="flex-1 p-6">
-              <Outlet />
+              <ErrorBoundary label="Dashboard page">
+                <Outlet />
+              </ErrorBoundary>
             </main>
           </SidebarInset>
         </div>

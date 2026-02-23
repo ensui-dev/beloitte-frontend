@@ -6,30 +6,38 @@
  *
  * Flow: Choose account type → Fill details → Success → Go to dashboard
  */
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { useCallback } from "react";
 import { useSiteConfig } from "@/hooks/use-site-config";
 import { usePageTitle } from "@/hooks/use-page-title";
-import { useSession } from "@/components/providers/auth-provider";
+import { useAuth, useSession } from "@/components/providers/auth-provider";
+import { ThemeProvider } from "@/components/theme/theme-provider";
 import { AccountSetupWizard } from "@/components/account/account-setup-wizard";
 import { Shield } from "lucide-react";
 import type { BankAccount } from "@/lib/data/types";
 
 export function OnboardingPage(): React.ReactElement {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { data: config } = useSiteConfig();
+  const { refreshSession } = useAuth();
   const session = useSession();
+
+  // ?intent=business skips type selection and goes straight to business details
+  const isBusiness = searchParams.get("intent") === "business";
 
   usePageTitle("Set Up Your Account", config?.bankName);
 
   const handleComplete = useCallback(
-    (_account: BankAccount): void => {
+    async (_account: BankAccount): Promise<void> => {
+      // Refresh session so AuthGuard sees hasAccounts: true and doesn't redirect back
+      await refreshSession();
       navigate("/dashboard", { replace: true });
     },
-    [navigate]
+    [navigate, refreshSession]
   );
 
-  return (
+  const page = (
     <div className="relative flex min-h-screen items-center justify-center bg-background px-6 py-12">
       {/* Atmospheric background glow — same style as the login page */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
@@ -61,11 +69,20 @@ export function OnboardingPage(): React.ReactElement {
         <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 backdrop-blur-sm">
           <AccountSetupWizard
             onComplete={handleComplete}
-            title="Open your first account"
-            description="Choose between a personal or business account to get started."
+            title={isBusiness ? "Open a business account" : "Open your first account"}
+            description={
+              isBusiness
+                ? "Tell us about your business to get started."
+                : "Choose between a personal or business account to get started."
+            }
+            initialAccountType={isBusiness ? "business" : undefined}
           />
         </div>
       </div>
     </div>
   );
+
+  // Apply bank theme — onboarding is outside DashboardLayout so needs its own ThemeProvider
+  if (!config) return page;
+  return <ThemeProvider theme={config.theme}>{page}</ThemeProvider>;
 }

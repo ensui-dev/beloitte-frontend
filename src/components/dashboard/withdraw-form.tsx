@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { z } from "zod";
+import { toast } from "sonner";
 import { dataService } from "@/lib/data/data-service";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -53,7 +54,15 @@ export function WithdrawForm({
 
   const mutation = useMutation<Transaction, Error, WithdrawRequest>({
     mutationFn: (withdrawal) => dataService.createWithdrawal(withdrawal),
-    onSuccess: () => onSuccess?.(),
+    onSuccess: (tx) => {
+      toast.success("Withdrawal submitted", {
+        description: tx.reference ? `Ref: ${tx.reference}` : undefined,
+      });
+      onSuccess?.();
+    },
+    onError: (error) => {
+      toast.error("Withdrawal failed", { description: error.message });
+    },
   });
 
   const handleSubmit = (e: React.FormEvent): void => {
