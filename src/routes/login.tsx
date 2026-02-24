@@ -18,7 +18,7 @@ import { useSiteConfig } from "@/hooks/use-site-config";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { redirectToDiscordLogin } from "@/lib/auth/discord";
-import { seedMockAccounts } from "@/lib/data/data-service";
+import { seedMockSetup } from "@/lib/data/data-service";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LogIn, Bug, Database, Shield, Zap, ArrowLeft } from "lucide-react";
@@ -164,7 +164,7 @@ export function LoginPage(): React.ReactElement {
                 setMockLoading(true);
                 setMockError(null);
                 try {
-                  seedMockAccounts();
+                  seedMockSetup();
                   await handleLoginToken(MOCK_TOKEN);
                 } catch {
                   setMockError("Mock login failed. Check console for details.");
@@ -179,7 +179,7 @@ export function LoginPage(): React.ReactElement {
             </Button>
 
             <p className="text-center text-[10px] text-muted-foreground/60">
-              Seeded skips onboarding with pre-populated accounts
+              Seeded skips setup wizard &amp; onboarding with pre-populated data
             </p>
 
             {mockError && (

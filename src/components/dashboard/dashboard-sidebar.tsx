@@ -20,6 +20,7 @@ import {
 import { useSiteConfig } from "@/hooks/use-site-config";
 import { useActiveRole } from "@/components/providers/auth-provider";
 import { useAccountContext } from "@/components/providers/account-provider";
+import { getAccountDisplayName, isBusinessAccount } from "@/lib/data/types";
 import {
   LayoutDashboard,
   ArrowLeftRight,
@@ -34,6 +35,14 @@ import {
   Plus,
   ChevronsUpDown,
   Check,
+  Search,
+  Banknote,
+  UserCog,
+  ClipboardList,
+  Shield,
+  FileBarChart,
+  Activity,
+  Eye,
 } from "lucide-react";
 
 interface NavItem {
@@ -47,6 +56,23 @@ const USER_NAV: readonly NavItem[] = [
   { label: "Transactions", href: "/dashboard/transactions", icon: Receipt },
   { label: "Transfers", href: "/dashboard/transfers", icon: ArrowLeftRight },
   { label: "Withdrawals", href: "/dashboard/withdrawals", icon: ArrowDownToLine },
+];
+
+const TELLER_NAV: readonly NavItem[] = [
+  { label: "Dashboard", href: "/dashboard/teller", icon: LayoutDashboard },
+  { label: "Account Lookup", href: "/dashboard/teller/lookup", icon: Search },
+  { label: "Process Deposit", href: "/dashboard/teller/deposit", icon: Banknote },
+  { label: "Process Withdrawal", href: "/dashboard/teller/withdrawal", icon: ArrowDownToLine },
+  { label: "Account Mgmt", href: "/dashboard/teller/accounts", icon: UserCog },
+  { label: "Transaction Log", href: "/dashboard/teller/transactions", icon: ClipboardList },
+];
+
+const ACCOUNTANT_NAV: readonly NavItem[] = [
+  { label: "Dashboard", href: "/dashboard/accountant", icon: Shield },
+  { label: "All Accounts", href: "/dashboard/accountant/accounts", icon: Eye },
+  { label: "Transaction History", href: "/dashboard/accountant/transactions", icon: FileBarChart },
+  { label: "Activity Log", href: "/dashboard/accountant/activity", icon: Activity },
+  { label: "System Status", href: "/dashboard/accountant/health", icon: BarChart3 },
 ];
 
 const ADMIN_NAV: readonly NavItem[] = [
@@ -95,6 +121,88 @@ export function DashboardSidebar(): React.ReactElement {
     </SidebarGroup>
   );
 
+  const renderAccountSwitcher = (): React.ReactElement | null => {
+    if (!selectedAccount) return null;
+
+    return (
+      <>
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Account
+          </SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    className="w-full bg-white/[0.02] hover:bg-white/[0.05] data-[state=open]:bg-white/[0.05]"
+                    tooltip={getAccountDisplayName(selectedAccount)}
+                  >
+                    {isBusinessAccount(selectedAccount) ? (
+                      <Building2 className="h-4 w-4 shrink-0" />
+                    ) : (
+                      <User className="h-4 w-4 shrink-0" />
+                    )}
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-sm font-medium">
+                        {getAccountDisplayName(selectedAccount)}
+                      </span>
+                      <span className="truncate text-[10px] text-muted-foreground">
+                        {selectedAccount.iban.slice(-8)}
+                      </span>
+                    </div>
+                    <ChevronsUpDown className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  side="right"
+                  align="start"
+                  className="w-56 border-white/[0.06] bg-popover/90 backdrop-blur-xl"
+                >
+                  {accounts.map((account) => {
+                    const isSelected = account.id === selectedAccount.id;
+                    return (
+                      <DropdownMenuItem
+                        key={account.id}
+                        onClick={() => selectAccount(account.id)}
+                        className="flex items-center gap-3"
+                      >
+                        {isBusinessAccount(account) ? (
+                          <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        ) : (
+                          <User className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm">{getAccountDisplayName(account)}</div>
+                          <div className="truncate text-[10px] text-muted-foreground">
+                            {account.iban.slice(-8)}
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
+                        )}
+                      </DropdownMenuItem>
+                    );
+                  })}
+                  <DropdownMenuSeparator className="bg-white/[0.06]" />
+                  <DropdownMenuItem
+                    onClick={() => navigate("/dashboard/accounts/new")}
+                    className="flex items-center gap-3"
+                  >
+                    <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="text-sm">New Account</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarSeparator className="bg-white/[0.06]" />
+      </>
+    );
+  };
+
   return (
     <Sidebar collapsible="icon" className="border-r border-white/[0.06]">
       <SidebarHeader className="p-4">
@@ -105,88 +213,14 @@ export function DashboardSidebar(): React.ReactElement {
 
       <SidebarContent>
         {activeRole === "admin" ? (
-          /* ─── Admin view: only admin navigation ─── */
           renderNavGroup("Administration", ADMIN_NAV)
+        ) : activeRole === "teller" ? (
+          renderNavGroup("Teller", TELLER_NAV)
+        ) : activeRole === "accountant" ? (
+          renderNavGroup("Accountant", ACCOUNTANT_NAV)
         ) : (
-          /* ─── User view: account switcher + user navigation ─── */
           <>
-            {/* Account switcher dropdown */}
-            {selectedAccount && (
-              <SidebarGroup>
-                <SidebarGroupLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Account
-                </SidebarGroupLabel>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <SidebarMenuButton
-                          className="w-full bg-white/[0.02] hover:bg-white/[0.05] data-[state=open]:bg-white/[0.05]"
-                          tooltip={selectedAccount.accountName}
-                        >
-                          {selectedAccount.accountType === "business" ? (
-                            <Building2 className="h-4 w-4 shrink-0" />
-                          ) : (
-                            <User className="h-4 w-4 shrink-0" />
-                          )}
-                          <div className="flex min-w-0 flex-1 flex-col">
-                            <span className="truncate text-sm font-medium">
-                              {selectedAccount.accountName}
-                            </span>
-                            <span className="truncate text-[10px] text-muted-foreground">
-                              {selectedAccount.accountNumber.slice(-8)}
-                            </span>
-                          </div>
-                          <ChevronsUpDown className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        </SidebarMenuButton>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        side="right"
-                        align="start"
-                        className="w-56 border-white/[0.06] bg-popover/90 backdrop-blur-xl"
-                      >
-                        {accounts.map((account) => {
-                          const isSelected = account.id === selectedAccount.id;
-                          return (
-                            <DropdownMenuItem
-                              key={account.id}
-                              onClick={() => selectAccount(account.id)}
-                              className="flex items-center gap-3"
-                            >
-                              {account.accountType === "business" ? (
-                                <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
-                              ) : (
-                                <User className="h-4 w-4 shrink-0 text-muted-foreground" />
-                              )}
-                              <div className="min-w-0 flex-1">
-                                <div className="truncate text-sm">{account.accountName}</div>
-                                <div className="truncate text-[10px] text-muted-foreground">
-                                  {account.accountNumber.slice(-8)}
-                                </div>
-                              </div>
-                              {isSelected && (
-                                <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
-                              )}
-                            </DropdownMenuItem>
-                          );
-                        })}
-                        <DropdownMenuSeparator className="bg-white/[0.06]" />
-                        <DropdownMenuItem
-                          onClick={() => navigate("/dashboard/accounts/new")}
-                          className="flex items-center gap-3"
-                        >
-                          <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
-                          <span className="text-sm">New Account</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroup>
-            )}
-
-            <SidebarSeparator className="bg-white/[0.06]" />
-
+            {renderAccountSwitcher()}
             {renderNavGroup("Navigation", USER_NAV)}
           </>
         )}

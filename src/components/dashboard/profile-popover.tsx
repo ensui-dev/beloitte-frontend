@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { useAuth, useSession, useIsAdmin } from "@/components/providers/auth-provider";
+import { useAuth, useSession } from "@/components/providers/auth-provider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -18,28 +18,30 @@ function getInitials(name: string): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-/** Role label displayed under the username */
 const ROLE_LABELS: Record<UserRole, string> = {
-  player: "User",
+  customer: "Customer",
+  teller: "Teller",
+  accountant: "Accountant",
   admin: "Administrator",
 };
 
-/** Route to navigate to after switching roles */
 const ROLE_HOME: Record<UserRole, string> = {
-  player: "/dashboard/overview",
+  customer: "/dashboard/overview",
+  teller: "/dashboard/teller",
+  accountant: "/dashboard/accountant",
   admin: "/dashboard/admin",
 };
 
 export function ProfilePopover(): React.ReactElement | null {
   const session = useSession();
   const { switchRole, logout } = useAuth();
-  const isAdmin = useIsAdmin();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   if (!session) return null;
 
   const { user, activeRole } = session;
+  const hasMultipleRoles = user.roles.length > 1;
 
   const handleRoleSwitch = (role: UserRole): void => {
     if (role === activeRole) return;
@@ -62,7 +64,7 @@ export function ProfilePopover(): React.ReactElement | null {
           aria-label="Profile menu"
         >
           <Avatar className="h-8 w-8">
-            <AvatarImage src={user.discordAvatar} alt={user.discordUsername} />
+            <AvatarImage src={user.discordAvatar ?? undefined} alt={user.discordUsername} />
             <AvatarFallback className="bg-primary/10 text-xs text-primary">
               {getInitials(user.discordUsername)}
             </AvatarFallback>
@@ -77,14 +79,14 @@ export function ProfilePopover(): React.ReactElement | null {
         {/* User info + inline role switcher */}
         <div className="flex items-center gap-3 p-4">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={user.discordAvatar} alt={user.discordUsername} />
+            <AvatarImage src={user.discordAvatar ?? undefined} alt={user.discordUsername} />
             <AvatarFallback className="bg-primary/10 text-sm text-primary">
               {getInitials(user.discordUsername)}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium">{user.discordUsername}</div>
-            {isAdmin ? (
+            {hasMultipleRoles ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground">
@@ -96,20 +98,16 @@ export function ProfilePopover(): React.ReactElement | null {
                   align="start"
                   className="w-48 border-white/[0.06] bg-popover/90 backdrop-blur-xl"
                 >
-                  <DropdownMenuItem
-                    onClick={() => handleRoleSwitch("player")}
-                    className="flex items-center justify-between"
-                  >
-                    User
-                    {activeRole === "player" && <Check className="h-3.5 w-3.5 text-primary" />}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleRoleSwitch("admin")}
-                    className="flex items-center justify-between"
-                  >
-                    Administrator
-                    {activeRole === "admin" && <Check className="h-3.5 w-3.5 text-primary" />}
-                  </DropdownMenuItem>
+                  {user.roles.map((role) => (
+                    <DropdownMenuItem
+                      key={role}
+                      onClick={() => handleRoleSwitch(role)}
+                      className="flex items-center justify-between"
+                    >
+                      {ROLE_LABELS[role]}
+                      {activeRole === role && <Check className="h-3.5 w-3.5 text-primary" />}
+                    </DropdownMenuItem>
+                  ))}
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (

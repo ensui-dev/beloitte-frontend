@@ -32,29 +32,46 @@ const MOCK_VERSION_KEY = "beloitte:mock-version";
  * Bump this any time mock-data.ts defaults change in a way that
  * should invalidate users' saved localStorage state.
  */
-const MOCK_DATA_VERSION = "7";
+const MOCK_DATA_VERSION = "9";
 
-function getMockSiteConfig(): SiteConfig {
-  if (!isMockMode()) return mockData.siteConfig;
+/**
+ * Ensure localStorage mock state matches the current code version.
+ * Idempotent — safe to call from any mock reader. On version mismatch,
+ * all persisted mock state is discarded so users see fresh defaults.
+ */
+function ensureMockVersion(): void {
+  if (!isMockMode()) return;
 
   try {
     const storedVersion = localStorage.getItem(MOCK_VERSION_KEY);
     if (storedVersion !== MOCK_DATA_VERSION) {
-      // Stale data from an older mock version — discard all mock state
       localStorage.removeItem(MOCK_CONFIG_KEY);
       localStorage.removeItem(MOCK_ACCOUNTS_KEY);
       localStorage.setItem(MOCK_VERSION_KEY, MOCK_DATA_VERSION);
-      return mockData.siteConfig;
     }
+  } catch {
+    // Storage unavailable — ignore
+  }
+}
 
+function getMockSiteConfig(): SiteConfig {
+  if (!isMockMode()) return mockData.siteConfig;
+
+  ensureMockVersion();
+
+  try {
     const stored = localStorage.getItem(MOCK_CONFIG_KEY);
     if (stored) {
       return JSON.parse(stored) as SiteConfig;
     }
   } catch {
-    // Corrupted data — fall through to default
+    // Corrupted data — fall through to "no config" state
   }
-  return mockData.siteConfig;
+
+  // Fresh localStorage = no config = setup wizard should trigger.
+  // Throwing here lets fetchWithFallback propagate the error so
+  // useSiteConfig() enters error state, which SetupGuard detects.
+  throw new Error("No site config found — setup required");
 }
 
 function setMockSiteConfig(config: SiteConfig): void {
@@ -88,8 +105,21 @@ export function seedMockAccounts(): void {
   setMockAccounts([...mockData.bankAccounts]);
 }
 
+/**
+ * Seed both site config AND accounts into localStorage.
+ * Called by "Dev Login (Seeded)" to skip the setup wizard AND
+ * onboarding entirely — go straight to a populated dashboard.
+ */
+export function seedMockSetup(): void {
+  if (!isMockMode()) return;
+  setMockSiteConfig(mockData.siteConfig);
+  setMockAccounts([...mockData.bankAccounts]);
+}
+
 function getMockAccounts(): BankAccount[] {
   if (!isMockMode()) return [...mockData.bankAccounts];
+
+  ensureMockVersion();
 
   try {
     const stored = localStorage.getItem(MOCK_ACCOUNTS_KEY);
@@ -106,9 +136,48 @@ function setMockAccounts(accounts: BankAccount[]): void {
   } catch { /* storage full — ignore */ }
 }
 
+/**
+ * Generate a realistic BWIFT IBAN from a mock snowflake ID.
+ *
+ * Algorithm:
+ * 1. Generate a random 18-digit snowflake
+ * 2. Convert snowflake to base-36, zero-pad to 14 chars
+ * 3. Prepend bank code (BELT)
+ * 4. Calculate ISO 13616 check digits
+ * 5. Assemble: DC{check}{bankCode}{accountBase36}
+ */
 function generateMockIban(): string {
-  const digits = Array.from({ length: 14 }, () => Math.floor(Math.random() * 10)).join("");
-  return `DC12RVNB${digits}`;
+  const bankCode = "BELT";
+
+  // Generate a random 18-digit snowflake ID
+  const snowflake = BigInt(Math.floor(Math.random() * 9e17) + 1e17);
+
+  // Convert to base-36 and zero-pad to 14 characters
+  const base36 = snowflake.toString(36).toUpperCase().padStart(14, "0");
+
+  // Calculate ISO 13616 check digits:
+  // Rearrange: {bankCode}{account}DC00
+  const rearranged = `${bankCode}${base36}DC00`;
+
+  // Convert letters to numbers (A=10 ... Z=35), digits stay as-is
+  let numericStr = "";
+  for (const ch of rearranged) {
+    const code = ch.charCodeAt(0);
+    if (code >= 65 && code <= 90) {
+      numericStr += String(code - 55); // A=10, B=11, ...
+    } else {
+      numericStr += ch;
+    }
+  }
+
+  // Compute mod 97 on the large number (process in chunks to avoid overflow)
+  let remainder = 0;
+  for (const digit of numericStr) {
+    remainder = (remainder * 10 + Number(digit)) % 97;
+  }
+  const check = (98 - remainder).toString().padStart(2, "0");
+
+  return `DC${check}${bankCode}${base36}`;
 }
 
 function getMockSession(): Session {
@@ -167,25 +236,13 @@ export const dataService = {
   /** Get all accounts for the current user. */
   getMyAccounts(): Promise<BankAccount[]> {
     return fetchWithFallback(
-      () => apiClient.get<BankAccount[]>("/accounts/me/all"),
+      () => apiClient.get<BankAccount[]>("/accounts"),
       () => getMockAccounts(),
       "myAccounts"
     );
   },
 
-  /** @deprecated Use getMyAccounts() — kept for backward compat. */
-  getMyAccount(): Promise<BankAccount> {
-    return fetchWithFallback(
-      () => apiClient.get<BankAccount>("/accounts/me"),
-      () => {
-        const accounts = getMockAccounts();
-        return accounts[0] ?? mockData.bankAccount;
-      },
-      "myAccount"
-    );
-  },
-
-  getAccount(accountId: string): Promise<BankAccount> {
+  getAccount(accountId: number): Promise<BankAccount> {
     return fetchWithFallback(
       () => apiClient.get<BankAccount>(`/accounts/${accountId}`),
       () => {
@@ -201,22 +258,25 @@ export const dataService = {
     return fetchWithFallback(
       () => apiClient.post<BankAccount>("/accounts", request),
       () => {
-        const newAccount: BankAccount = {
-          id: `acc-${crypto.randomUUID().slice(0, 8)}`,
-          userId: mockData.session.user.id,
-          bankId: request.bankId,
-          accountNumber: generateMockIban(),
-          balance: request.initialDeposit,
-          currency: mockData.siteConfig.currency.code,
-          status: "active",
-          createdAt: new Date().toISOString(),
-          accountType: request.accountType,
-          accountName: request.accountName,
-          initialDeposit: request.initialDeposit,
-          netWorth: request.netWorth,
-          companyCapital: request.companyCapital,
-        };
         const accounts = getMockAccounts();
+        const nextId = accounts.reduce((max, a) => Math.max(max, a.id), 0) + 1;
+        const isBusinessType = request.accountType.startsWith("business");
+
+        const newAccount: BankAccount = {
+          id: nextId,
+          iban: generateMockIban(),
+          accountType: isBusinessType
+            ? { id: 3, category: { id: 2, categoryName: "business" }, typeName: request.accountType, interestRate: 0.005, minBalance: 100, monthlyFee: 5, withdrawalLimitDaily: 50000, transferLimitDaily: 100000, requiresBusinessEntity: true }
+            : { id: 1, category: { id: 1, categoryName: "personal" }, typeName: request.accountType, interestRate: 0.01, minBalance: 0, monthlyFee: 0, withdrawalLimitDaily: 10000, transferLimitDaily: 25000, requiresBusinessEntity: false },
+          user: isBusinessType ? null : mockData.mockOwner,
+          business: isBusinessType ? mockData.mockBusiness : null,
+          authorizedUsers: [],
+          balance: request.initialDeposit ?? 0,
+          nickname: request.nickname ?? null,
+          status: "active",
+          openedAt: new Date().toISOString(),
+          closedAt: null,
+        };
         accounts.push(newAccount);
         setMockAccounts(accounts);
         return newAccount;
@@ -228,13 +288,13 @@ export const dataService = {
   // ─── Transactions ──────────────────────────────────────────
 
   getTransactions(
-    accountId: string,
+    accountId: number,
     filters: TransactionFilters = {}
   ): Promise<PaginatedResponse<Transaction>> {
     const params = new URLSearchParams();
     if (filters.page) params.set("page", String(filters.page));
-    if (filters.pageSize) params.set("pageSize", String(filters.pageSize));
-    if (filters.type) params.set("type", filters.type);
+    if (filters.pageSize) params.set("page_size", String(filters.pageSize));
+    if (filters.transactionType) params.set("transaction_type", filters.transactionType);
     if (filters.status) params.set("status", filters.status);
     const qs = params.toString();
 
@@ -292,7 +352,23 @@ export const dataService = {
 
   getSession(): Promise<Session> {
     return fetchWithFallback(
-      () => apiClient.get<Session>("/auth/me"),
+      async () => {
+        // Backend /auth/me returns everything except hasAccounts.
+        // We derive it client-side by checking if the user owns any accounts.
+        const raw = await apiClient.get<Omit<Session, "hasAccounts">>("/auth/me");
+
+        let hasAccounts = true; // safe default: don't force onboarding on failure
+        try {
+          const accounts = await apiClient.get<unknown[]>("/accounts");
+          hasAccounts = Array.isArray(accounts) && accounts.length > 0;
+        } catch {
+          // Accounts endpoint unreachable — assume user has accounts to avoid
+          // incorrectly redirecting to onboarding. The dashboard will show
+          // its own error state if accounts truly can't be loaded.
+        }
+
+        return { ...raw, hasAccounts };
+      },
       () => getMockSession(),
       "session"
     );

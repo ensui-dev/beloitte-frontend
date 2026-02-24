@@ -27,7 +27,7 @@ type WithdrawData = z.infer<typeof withdrawSchema>;
 // ─── Component ──────────────────────────────────────────────
 
 interface WithdrawFormProps {
-  readonly accountId: string;
+  readonly accountId: number;
   readonly currency: CurrencyConfig;
   readonly balance?: number;
   /** When true, renders without the outer Card wrapper (for use inside a Dialog). */
@@ -56,7 +56,7 @@ export function WithdrawForm({
     mutationFn: (withdrawal) => dataService.createWithdrawal(withdrawal),
     onSuccess: (tx) => {
       toast.success("Withdrawal submitted", {
-        description: tx.reference ? `Ref: ${tx.reference}` : undefined,
+        description: tx.referenceId ? `Ref: ${tx.referenceId}` : undefined,
       });
       onSuccess?.();
     },
@@ -122,9 +122,9 @@ export function WithdrawForm({
           <p className="mt-1 text-sm text-muted-foreground">
             Your withdrawal is being processed.
           </p>
-          {mutation.data.reference && (
+          {mutation.data.referenceId != null && (
             <p className="mt-2 font-mono text-xs text-muted-foreground">
-              Ref: {mutation.data.reference}
+              Ref: {mutation.data.referenceId}
             </p>
           )}
         </div>

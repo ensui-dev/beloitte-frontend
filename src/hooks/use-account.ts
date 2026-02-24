@@ -3,7 +3,6 @@
  *
  * useAccounts()      — fetches all accounts for the current user
  * useCreateAccount() — mutation to create a new personal/business account
- * useAccount()       — DEPRECATED, kept for backward compat
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { dataService } from "@/lib/data/data-service";
@@ -30,13 +29,3 @@ export function useCreateAccount() {
   });
 }
 
-/**
- * @deprecated Use useAccounts() + AccountProvider instead.
- * Kept temporarily so existing consumers don't break during migration.
- */
-export function useAccount() {
-  return useQuery<BankAccount>({
-    queryKey: ["myAccount"],
-    queryFn: () => dataService.getMyAccount(),
-  });
-}

@@ -13,7 +13,7 @@ import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AccountTypeSelector } from "./account-type-selector";
 import { AccountDetailsForm } from "./account-details-form";
-import type { AccountType, BankAccount } from "@/lib/data/types";
+import { getAccountCategory, getAccountDisplayName, type AccountCategory, type BankAccount } from "@/lib/data/types";
 
 type WizardStep = "type" | "details" | "success";
 
@@ -24,8 +24,8 @@ interface AccountSetupWizardProps {
   readonly title?: string;
   /** Optional subheading override. */
   readonly description?: string;
-  /** Pre-select account type and skip the type-selection step. */
-  readonly initialAccountType?: AccountType;
+  /** Pre-select account category and skip the type-selection step. */
+  readonly initialAccountType?: AccountCategory;
 }
 
 export function AccountSetupWizard({
@@ -35,7 +35,7 @@ export function AccountSetupWizard({
   initialAccountType,
 }: AccountSetupWizardProps): React.ReactElement {
   const [step, setStep] = useState<WizardStep>(initialAccountType ? "details" : "type");
-  const [accountType, setAccountType] = useState<AccountType | null>(initialAccountType ?? null);
+  const [accountType, setAccountType] = useState<AccountCategory | null>(initialAccountType ?? null);
   const [createdAccount, setCreatedAccount] = useState<BankAccount | null>(null);
 
   // Step 1: Type selection
@@ -101,16 +101,16 @@ export function AccountSetupWizard({
       <div className="space-y-2">
         <h2 className="text-xl font-semibold tracking-tight">Account Created</h2>
         <p className="text-sm text-muted-foreground">
-          Your {createdAccount?.accountType === "business" ? "business" : "personal"} account
-          {createdAccount?.accountName ? ` "${createdAccount.accountName}"` : ""} is ready.
+          Your {createdAccount ? getAccountCategory(createdAccount) : "personal"} account
+          {createdAccount ? ` "${getAccountDisplayName(createdAccount)}"` : ""} is ready.
         </p>
       </div>
 
-      {createdAccount?.accountNumber && (
+      {createdAccount?.iban && (
         <div className="w-full rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
           <p className="text-xs text-muted-foreground">Account Number (BWIFT IBAN)</p>
           <p className="mt-1 font-mono text-sm tracking-wider">
-            {createdAccount.accountNumber}
+            {createdAccount.iban}
           </p>
         </div>
       )}

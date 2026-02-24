@@ -6,26 +6,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { TransactionType, TransactionStatus } from "@/lib/data/types";
-import { TRANSACTION_TYPES, TRANSACTION_STATUSES } from "@/lib/data/types";
+import type { TransactionTypeCode, TransactionStatus } from "@/lib/data/types";
+import { TRANSACTION_TYPE_CODES, TRANSACTION_STATUSES } from "@/lib/data/types";
 
-const TYPE_LABELS: Record<TransactionType, string> = {
+const TYPE_LABELS: Record<TransactionTypeCode, string> = {
   deposit: "Deposit",
   withdrawal: "Withdrawal",
   transfer_in: "Transfer In",
   transfer_out: "Transfer Out",
+  wire_in: "Wire In",
+  wire_out: "Wire Out",
+  fee: "Fee",
+  interest: "Interest",
+  adjustment: "Adjustment",
 };
 
 const STATUS_LABELS: Record<TransactionStatus, string> = {
-  completed: "Completed",
+  posted: "Posted",
   pending: "Pending",
   failed: "Failed",
+  reversed: "Reversed",
 };
 
 interface TransactionFiltersProps {
-  readonly onTypeChange: (type: TransactionType | undefined) => void;
+  readonly onTypeChange: (type: TransactionTypeCode | undefined) => void;
   readonly onStatusChange: (status: TransactionStatus | undefined) => void;
-  readonly currentType: TransactionType | undefined;
+  readonly currentType: TransactionTypeCode | undefined;
   readonly currentStatus: TransactionStatus | undefined;
 }
 
@@ -39,14 +45,14 @@ export function TransactionFilters({
     <div className="flex flex-wrap gap-3">
       <Select
         value={currentType ?? "all"}
-        onValueChange={(val) => onTypeChange(val === "all" ? undefined : (val as TransactionType))}
+        onValueChange={(val) => onTypeChange(val === "all" ? undefined : (val as TransactionTypeCode))}
       >
         <SelectTrigger className="w-[160px] border-white/[0.06] bg-white/[0.02]">
           <SelectValue placeholder="All types" />
         </SelectTrigger>
         <SelectContent className="border-white/[0.06] bg-popover/90 backdrop-blur-xl">
           <SelectItem value="all">All types</SelectItem>
-          {TRANSACTION_TYPES.map((type) => (
+          {TRANSACTION_TYPE_CODES.map((type) => (
             <SelectItem key={type} value={type}>
               {TYPE_LABELS[type]}
             </SelectItem>
@@ -81,11 +87,11 @@ export function TransactionFilters({
 export function useTransactionFilterParams() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const type = (searchParams.get("type") as TransactionType | null) ?? undefined;
+  const type = (searchParams.get("type") as TransactionTypeCode | null) ?? undefined;
   const status = (searchParams.get("status") as TransactionStatus | null) ?? undefined;
   const page = Number(searchParams.get("page")) || 1;
 
-  const setType = (newType: TransactionType | undefined): void => {
+  const setType = (newType: TransactionTypeCode | undefined): void => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       if (newType) {

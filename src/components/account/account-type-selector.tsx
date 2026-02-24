@@ -3,15 +3,15 @@
  * Used as the first step in both onboarding and add-account flows.
  */
 import { User, Building2 } from "lucide-react";
-import type { AccountType } from "@/lib/data/types";
+import type { AccountCategory } from "@/lib/data/types";
 
 interface AccountTypeSelectorProps {
-  readonly selected: AccountType | null;
-  readonly onSelect: (type: AccountType) => void;
+  readonly selected: AccountCategory | null;
+  readonly onSelect: (type: AccountCategory) => void;
 }
 
 interface TypeOption {
-  readonly type: AccountType;
+  readonly type: AccountCategory;
   readonly label: string;
   readonly description: string;
   readonly icon: React.ComponentType<{ className?: string }>;

@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import type { Transaction } from "@/lib/data/types";
 import type { BwiftStatus } from "@/lib/data/types";
+import { getAccountCategory, getAccountDisplayName } from "@/lib/data/types";
 
 // ─── Monthly Stats ──────────────────────────────────────────
 
@@ -51,12 +52,12 @@ function computeMonthlyStats(
   let expenses = 0;
 
   for (const tx of transactions) {
-    if (tx.status !== "completed") continue;
+    if (tx.status !== "posted") continue;
 
-    const txDate = new Date(tx.createdAt);
+    const txDate = new Date(tx.transactedAt);
     if (txDate.getMonth() !== currentMonth || txDate.getFullYear() !== currentYear) continue;
 
-    if (tx.type === "deposit" || tx.type === "transfer_in") {
+    if (tx.transactionType.affectsBalance === "credit") {
       income += tx.amount;
     } else {
       expenses += tx.amount;
@@ -155,7 +156,7 @@ export function DashboardOverview(): React.ReactElement {
 
   const handleCopyIban = useCallback((): void => {
     if (!account) return;
-    void navigator.clipboard.writeText(account.accountNumber);
+    void navigator.clipboard.writeText(account.iban);
     setCopied(true);
     if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
     copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
@@ -189,16 +190,16 @@ export function DashboardOverview(): React.ReactElement {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                   <Wallet className="h-3.5 w-3.5" />
-                  {account?.accountName ?? "Balance"}
+                  {account ? getAccountDisplayName(account) : "Balance"}
                 </div>
                 {account && (
                   <div className="flex items-center gap-1 rounded-full border border-white/[0.06] bg-white/[0.03] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                    {account.accountType === "business" ? (
+                    {getAccountCategory(account) === "business" ? (
                       <Building2 className="h-3 w-3" />
                     ) : (
                       <User className="h-3 w-3" />
                     )}
-                    {account.accountType}
+                    {getAccountCategory(account)}
                   </div>
                 )}
               </div>
@@ -250,7 +251,7 @@ export function DashboardOverview(): React.ReactElement {
                       {copied ? "Copied!" : "Account Number (BWIFT IBAN)"}
                     </p>
                     <p className="mt-0.5 truncate font-mono text-xs tracking-wider text-foreground">
-                      {account.accountNumber}
+                      {account.iban}
                     </p>
                   </div>
                   {copied ? (

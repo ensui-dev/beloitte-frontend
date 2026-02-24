@@ -1,8 +1,11 @@
 /**
- * Account details form — renders different fields based on account type.
+ * Account details form — renders different fields based on account category.
  *
- * Personal:  In-Game Name, Total Cash Balance / Net Worth, Initial Deposit
- * Business:  Business Entity Name, Company Capital, Initial Deposit
+ * Personal:  Nickname (In-Game Name), Initial Deposit
+ * Business:  Nickname (Business Entity Name), Initial Deposit
+ *
+ * The form collects what the backend's CreateAccountRequest expects:
+ *   accountType (e.g. "personal_checking"), nickname, initialDeposit, businessId
  *
  * Follows the same manual useState + Zod safeParse pattern as TransferForm.
  */
@@ -17,32 +20,27 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useCreateAccount } from "@/hooks/use-account";
-import { useSession } from "@/components/providers/auth-provider";
-import type { AccountType, BankAccount } from "@/lib/data/types";
+import { getAccountDisplayName, type AccountCategory, type BankAccount } from "@/lib/data/types";
 
 // ─── Validation Schemas ─────────────────────────────────────
 
 const personalSchema = z.object({
-  accountName: z.string().min(1, "In-game name is required").max(32, "Name must be 32 characters or less"),
-  netWorth: z.number({ message: "Must be a number" }).nonnegative("Must be zero or positive"),
+  nickname: z.string().min(1, "In-game name is required").max(32, "Name must be 32 characters or less"),
   initialDeposit: z.number({ message: "Must be a number" }).positive("Initial deposit must be greater than 0"),
 });
 
 const businessSchema = z.object({
-  accountName: z.string().min(1, "Business entity name is required").max(64, "Name must be 64 characters or less"),
-  companyCapital: z.number({ message: "Must be a number" }).nonnegative("Must be zero or positive"),
+  nickname: z.string().min(1, "Business entity name is required").max(64, "Name must be 64 characters or less"),
   initialDeposit: z.number({ message: "Must be a number" }).positive("Initial deposit must be greater than 0"),
 });
 
 interface FormErrors {
-  accountName?: string;
-  netWorth?: string;
-  companyCapital?: string;
+  nickname?: string;
   initialDeposit?: string;
 }
 
 interface AccountDetailsFormProps {
-  readonly accountType: AccountType;
+  readonly accountType: AccountCategory;
   readonly onSuccess: (account: BankAccount) => void;
   readonly onBack: () => void;
 }
@@ -52,11 +50,9 @@ export function AccountDetailsForm({
   onSuccess,
   onBack,
 }: AccountDetailsFormProps): React.ReactElement {
-  const session = useSession();
   const mutation = useCreateAccount();
 
-  const [accountName, setAccountName] = useState("");
-  const [amountField, setAmountField] = useState(""); // net worth (personal) or company capital (business)
+  const [nickname, setNickname] = useState("");
   const [initialDeposit, setInitialDeposit] = useState("");
   const [errors, setErrors] = useState<FormErrors>({});
 
@@ -68,17 +64,10 @@ export function AccountDetailsForm({
 
     const schema = isPersonal ? personalSchema : businessSchema;
 
-    const raw = isPersonal
-      ? {
-          accountName,
-          netWorth: amountField === "" ? undefined : Number(amountField),
-          initialDeposit: initialDeposit === "" ? undefined : Number(initialDeposit),
-        }
-      : {
-          accountName,
-          companyCapital: amountField === "" ? undefined : Number(amountField),
-          initialDeposit: initialDeposit === "" ? undefined : Number(initialDeposit),
-        };
+    const raw = {
+      nickname,
+      initialDeposit: initialDeposit === "" ? undefined : Number(initialDeposit),
+    };
 
     const parsed = schema.safeParse(raw);
 
@@ -94,20 +83,21 @@ export function AccountDetailsForm({
       return;
     }
 
+    // Map category to a concrete account type name for the backend
+    const accountTypeName = isPersonal ? "personal_checking" as const : "business_checking" as const;
+
     mutation.mutate(
       {
-        bankId: session?.bankId ?? "demo-bank-001",
-        accountType,
-        accountName: parsed.data.accountName,
+        accountType: accountTypeName,
+        nickname: parsed.data.nickname,
         initialDeposit: parsed.data.initialDeposit,
-        netWorth: isPersonal ? (parsed.data as z.infer<typeof personalSchema>).netWorth : undefined,
-        companyCapital: !isPersonal ? (parsed.data as z.infer<typeof businessSchema>).companyCapital : undefined,
       },
       {
         onSuccess: (account) => {
+          const displayName = getAccountDisplayName(account);
           toast.success("Account created", {
-            description: account.accountName
-              ? `"${account.accountName}" is ready to use.`
+            description: displayName
+              ? `"${displayName}" is ready to use.`
               : undefined,
           });
           onSuccess(account);
@@ -121,52 +111,25 @@ export function AccountDetailsForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Account name */}
+      {/* Account nickname */}
       <div className="space-y-2">
         <Label htmlFor="account-name">
           {isPersonal ? "In-Game Name" : "Business Entity Name"}
         </Label>
         <Input
           id="account-name"
-          value={accountName}
-          onChange={(e) => setAccountName(e.target.value)}
+          value={nickname}
+          onChange={(e) => setNickname(e.target.value)}
           placeholder={isPersonal ? "Your Minecraft username" : "e.g. MarbleCorp Industries"}
           className="border-white/[0.06] bg-white/[0.02]"
           autoFocus
         />
-        {errors.accountName && (
-          <p className="text-xs text-destructive">{errors.accountName}</p>
+        {errors.nickname && (
+          <p className="text-xs text-destructive">{errors.nickname}</p>
         )}
       </div>
 
       <Separator className="bg-white/[0.06]" />
-
-      {/* Type-specific amount field */}
-      <div className="space-y-2">
-        <Label htmlFor="amount-field">
-          {isPersonal ? "Total Cash Balance / Net Worth" : "Company Capital"}
-        </Label>
-        <p className="text-xs text-muted-foreground">
-          {isPersonal
-            ? "Your current total in-game wealth. This is for our records — it won't affect your account balance."
-            : "Total capital of the business entity. This is for our records — it won't affect your account balance."}
-        </p>
-        <Input
-          id="amount-field"
-          type="number"
-          value={amountField}
-          onChange={(e) => setAmountField(e.target.value)}
-          placeholder="0.00"
-          min={0}
-          step="0.01"
-          className="border-white/[0.06] bg-white/[0.02]"
-        />
-        {(isPersonal ? errors.netWorth : errors.companyCapital) && (
-          <p className="text-xs text-destructive">
-            {isPersonal ? errors.netWorth : errors.companyCapital}
-          </p>
-        )}
-      </div>
 
       {/* Initial deposit */}
       <div className="space-y-2">

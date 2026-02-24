@@ -17,11 +17,12 @@ import { formatCurrency } from "@/lib/config/currency-utils";
 // ─── BWIFT IBAN Utilities ───────────────────────────────────
 
 /**
- * BWIFT IBAN format: 2 letters (server) + 2 digits (check) + 4 letters (bank) + 14 digits (account)
- * Example: DC12RVNB00000000042069
- * Display: DC12 RVNB 0000 0000 0420 69
+ * BWIFT IBAN format: 2 letters (country) + 2 digits (check) + 4 letters (bank) + 14 alphanumeric (account)
+ * The account portion is a snowflake ID encoded in base-36, zero-padded to 14 characters.
+ * Example: DC45BELT0000DVVNQO2AM6
+ * Display: DC45 BELT 0000 DVVN QO2A M6
  */
-const BWIFT_IBAN_REGEX = /^[A-Z]{2}\d{2}[A-Z]{4}\d{14}$/;
+const BWIFT_IBAN_REGEX = /^[A-Z]{2}\d{2}[A-Z]{4}[A-Z0-9]{14}$/;
 const BWIFT_IBAN_LENGTH = 22;
 
 /** Strip all spaces from an IBAN string. */
@@ -62,7 +63,7 @@ const transferSchema = z.object({
 // ─── Component ──────────────────────────────────────────────
 
 interface TransferFormProps {
-  readonly accountId: string;
+  readonly accountId: number;
   readonly currency: CurrencyConfig;
   readonly balance?: number;
   /** When true, renders without the outer Card wrapper (for use inside a Dialog). */
@@ -89,7 +90,7 @@ export function TransferForm({ accountId, currency, balance, compact = false, on
     mutationFn: (transfer) => dataService.createTransfer(transfer),
     onSuccess: (tx) => {
       toast.success("Transfer submitted", {
-        description: tx.reference ? `Ref: ${tx.reference}` : undefined,
+        description: tx.referenceId ? `Ref: ${tx.referenceId}` : undefined,
       });
       onSuccess?.();
     },
@@ -166,9 +167,9 @@ export function TransferForm({ accountId, currency, balance, compact = false, on
           <p className="mt-1 text-sm text-muted-foreground">
             Your transfer is being processed.
           </p>
-          {mutation.data.reference && (
+          {mutation.data.referenceId != null && (
             <p className="mt-2 font-mono text-xs text-muted-foreground">
-              Ref: {mutation.data.reference}
+              Ref: {mutation.data.referenceId}
             </p>
           )}
         </div>
@@ -196,7 +197,7 @@ export function TransferForm({ accountId, currency, balance, compact = false, on
         <Label htmlFor="iban">Recipient IBAN</Label>
         <Input
           id="iban"
-          placeholder="DC00 XXXX 0000 0000 0000 00"
+          placeholder="DC00 XXXX 0000 XXXX XXXX XX"
           value={ibanRaw}
           onChange={handleIbanChange}
           className="border-white/[0.06] bg-white/[0.02] font-mono tracking-wider"

@@ -10,7 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { dataService } from "@/lib/data/data-service";
 import type { PaginatedResponse, Transaction, TransactionFilters } from "@/lib/data/types";
 
-export function useTransactions(accountId: string | undefined, filters: TransactionFilters = {}) {
+export function useTransactions(accountId: number | undefined, filters: TransactionFilters = {}) {
   return useQuery<PaginatedResponse<Transaction>>({
     queryKey: ["transactions", accountId, filters],
     queryFn: () => dataService.getTransactions(accountId!, filters),

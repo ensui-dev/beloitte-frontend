@@ -14,6 +14,17 @@ import { AdminOverview } from "@/routes/dashboard/admin/overview";
 import { AdminSiteEditor } from "@/routes/dashboard/admin/site-editor";
 import { AdminTheme } from "@/routes/dashboard/admin/theme";
 import { AdminSettings } from "@/routes/dashboard/admin/settings";
+import { TellerDashboard } from "@/routes/dashboard/teller/dashboard";
+import { TellerAccountLookup } from "@/routes/dashboard/teller/lookup";
+import { TellerProcessDeposit } from "@/routes/dashboard/teller/deposit";
+import { TellerProcessWithdrawal } from "@/routes/dashboard/teller/withdrawal";
+import { TellerAccountManagement } from "@/routes/dashboard/teller/accounts";
+import { TellerTransactionLog } from "@/routes/dashboard/teller/transactions";
+import { AccountantDashboard } from "@/routes/dashboard/accountant/dashboard";
+import { AccountantAllAccounts } from "@/routes/dashboard/accountant/accounts";
+import { AccountantTransactionHistory } from "@/routes/dashboard/accountant/transactions";
+import { AccountantActivityLog } from "@/routes/dashboard/accountant/activity";
+import { AccountantSystemHealth } from "@/routes/dashboard/accountant/health";
 
 export function App(): React.ReactElement {
   return (
@@ -37,6 +48,25 @@ export function App(): React.ReactElement {
           <Route path="transfers" element={<DashboardTransfers />} />
           <Route path="withdrawals" element={<DashboardWithdrawals />} />
           <Route path="accounts/new" element={<NewAccountPage />} />
+
+          {/* Teller routes — requires teller role */}
+          <Route element={<AuthGuard requiredRole="teller" />}>
+            <Route path="teller" element={<TellerDashboard />} />
+            <Route path="teller/lookup" element={<TellerAccountLookup />} />
+            <Route path="teller/deposit" element={<TellerProcessDeposit />} />
+            <Route path="teller/withdrawal" element={<TellerProcessWithdrawal />} />
+            <Route path="teller/accounts" element={<TellerAccountManagement />} />
+            <Route path="teller/transactions" element={<TellerTransactionLog />} />
+          </Route>
+
+          {/* Accountant routes — requires accountant role */}
+          <Route element={<AuthGuard requiredRole="accountant" />}>
+            <Route path="accountant" element={<AccountantDashboard />} />
+            <Route path="accountant/accounts" element={<AccountantAllAccounts />} />
+            <Route path="accountant/transactions" element={<AccountantTransactionHistory />} />
+            <Route path="accountant/activity" element={<AccountantActivityLog />} />
+            <Route path="accountant/health" element={<AccountantSystemHealth />} />
+          </Route>
 
           {/* Admin routes — requires admin role */}
           <Route element={<AuthGuard requiredRole="admin" />}>

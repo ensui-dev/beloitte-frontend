@@ -27,7 +27,7 @@ const SELECTED_ACCOUNT_KEY = "beloitte:selected-account";
 interface AccountContextValue {
   readonly accounts: readonly BankAccount[];
   readonly selectedAccount: BankAccount | null;
-  readonly selectAccount: (accountId: string) => void;
+  readonly selectAccount: (accountId: number) => void;
   readonly isLoading: boolean;
 }
 
@@ -39,9 +39,10 @@ interface AccountProviderProps {
 
 export function AccountProvider({ children }: AccountProviderProps): React.ReactElement {
   const { data: accounts = [], isLoading } = useAccounts();
-  const [selectedId, setSelectedId] = useState<string | null>(() => {
+  const [selectedId, setSelectedId] = useState<number | null>(() => {
     try {
-      return localStorage.getItem(SELECTED_ACCOUNT_KEY);
+      const stored = localStorage.getItem(SELECTED_ACCOUNT_KEY);
+      return stored !== null ? Number(stored) : null;
     } catch {
       return null;
     }
@@ -59,13 +60,13 @@ export function AccountProvider({ children }: AccountProviderProps): React.React
 
   // Persist selection to localStorage
   useEffect(() => {
-    if (!selectedId) return;
+    if (selectedId === null) return;
     try {
-      localStorage.setItem(SELECTED_ACCOUNT_KEY, selectedId);
+      localStorage.setItem(SELECTED_ACCOUNT_KEY, String(selectedId));
     } catch { /* ignore */ }
   }, [selectedId]);
 
-  const selectAccount = useCallback((accountId: string): void => {
+  const selectAccount = useCallback((accountId: number): void => {
     setSelectedId(accountId);
   }, []);
 

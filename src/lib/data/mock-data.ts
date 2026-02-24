@@ -5,13 +5,13 @@
  * WARNING: This data must NEVER appear in production.
  * The data-service.ts layer ensures this by checking VITE_MOCK_MODE.
  */
-import type { SiteConfig } from "@/lib/config/site-config-schema";
-import type { ActivityEvent, AdminStats, Bank, BankAccount, PaginatedResponse, Session, Transaction, VolumeDataPoint } from "./types";
+import type { ModuleInstance, SiteConfig } from "@/lib/config/site-config-schema";
+import type { AccountAuthorizedUser, AccountBusinessSummary, AccountTypeSummary, AccountUserSummary, ActivityEvent, AdminStats, Bank, BankAccount, PaginatedResponse, Session, Transaction, TransactionAccountSummary, TransactionInitiator, TransactionTypeSummary, VolumeDataPoint } from "./types";
 
 export const siteConfig: SiteConfig = {
   bankId: "demo-bank-001",
-  bankName: "Reveille National Bank",
-  bankSlug: "reveille",
+  bankName: "Beloitte Banking",
+  bankSlug: "beloitte",
   currency: {
     code: "RED",
     name: "Redmont Dollars",
@@ -94,7 +94,7 @@ export const siteConfig: SiteConfig = {
         testimonials: [
           {
             quote:
-              "RNB made managing my business finances effortless. The transfers are instant.",
+              "Beloitte made managing my business finances effortless. The transfers are instant.",
             author: "MarbleCorp",
             avatar: "https://media.licdn.com/dms/image/v2/D4E22AQFSMt_xcHSuOA/feedshare-shrink_800/B4EZbOp16CHIAo-/0/1747223798241?e=2147483647&v=beta&t=mzRhon8wKOxEjEANUiIhkSryi7O9PO6dAz3pQQ-A2eM",
             role: "Business Owner",
@@ -153,7 +153,7 @@ export const siteConfig: SiteConfig = {
       config: {
         heading: "Ready to modernize your banking?",
         description:
-          "Join thousands of DemocracyCraft citizens who trust Reveille National Bank.",
+          "Join thousands of DemocracyCraft citizens who bank with Beloitte.",
         buttonText: "Get Started",
         buttonLink: "/login",
         variant: "banner",
@@ -164,7 +164,7 @@ export const siteConfig: SiteConfig = {
       type: "footer",
       visible: true,
       config: {
-        brandName: "Reveille National Bank",
+        brandName: "Beloitte Banking",
         tagline: "Modern banking for DemocracyCraft",
         copyrightYear: "2026",
         links: [
@@ -219,209 +219,327 @@ export const siteConfig: SiteConfig = {
   },
 };
 
+// ─── Reusable mock sub-objects ────────────────────────────────
+
+const mockPersonalChecking: AccountTypeSummary = {
+  id: 1,
+  category: { id: 1, categoryName: "personal" },
+  typeName: "personal_checking",
+  interestRate: 0.01,
+  minBalance: 0,
+  monthlyFee: 0,
+  withdrawalLimitDaily: 10000,
+  transferLimitDaily: 25000,
+  requiresBusinessEntity: false,
+};
+
+const mockBusiness_CHECKING: AccountTypeSummary = {
+  id: 3,
+  category: { id: 2, categoryName: "business" },
+  typeName: "business_checking",
+  interestRate: 0.005,
+  minBalance: 100,
+  monthlyFee: 5,
+  withdrawalLimitDaily: 50000,
+  transferLimitDaily: 100000,
+  requiresBusinessEntity: true,
+};
+
+export const mockOwner: AccountUserSummary = {
+  id: 1,
+  discordId: "123456789012345678",
+  discordUsername: "EnsuiDev",
+  discordAvatar: null,
+  displayName: "EnsuiDev",
+  kycVerified: true,
+  isActive: true,
+  suspendedAt: null,
+  suspensionReason: null,
+};
+
+export const mockBusiness: AccountBusinessSummary = {
+  id: 1,
+  businessName: "Ensui Enterprises",
+  businessType: "LLC",
+  docRegistered: true,
+  registeredAt: "2025-07-20T00:00:00Z",
+  isActive: true,
+};
+
+const mockAuthorizedUser: AccountAuthorizedUser = {
+  id: 1,
+  user: {
+    id: 2,
+    discordId: "987654321098765432",
+    discordUsername: "NickTheDev",
+    discordAvatar: null,
+    displayName: "nick!",
+    kycVerified: true,
+    isActive: true,
+    suspendedAt: null,
+    suspensionReason: null,
+  },
+  permissionLevel: "transact",
+  grantedAt: "2025-08-15T00:00:00Z",
+  revokedAt: null,
+};
+
 // ─── Multi-account mock data ──────────────────────────────────
 // The existing user has two accounts: a personal and a business.
 
 export const bankAccounts: readonly BankAccount[] = [
   {
-    id: "acc-001",
-    userId: "user-001",
-    bankId: "demo-bank-001",
-    accountNumber: "DC12RVNB00000000424242",
+    id: 1,
+    iban: "DC75BELT003819DZ5F57SI",
+    accountType: mockPersonalChecking,
+    user: mockOwner,
+    business: null,
+    authorizedUsers: [],
     balance: 15420.5,
-    currency: siteConfig.currency.code,
+    nickname: "EnsuiDev",
     status: "active",
-    createdAt: "2025-06-15T00:00:00Z",
-    accountType: "personal",
-    accountName: "EnsuiDev",
-    initialDeposit: 5000,
-    netWorth: 25000,
+    openedAt: "2025-06-15T00:00:00Z",
+    closedAt: null,
   },
   {
-    id: "acc-002",
-    userId: "user-001",
-    bankId: "demo-bank-001",
-    accountNumber: "DC12RVNB00000000853791",
+    id: 2,
+    iban: "DC92BELT006HIRYAVR9IHR",
+    accountType: mockBusiness_CHECKING,
+    user: null,
+    business: mockBusiness,
+    authorizedUsers: [mockAuthorizedUser],
     balance: 45000,
-    currency: siteConfig.currency.code,
+    nickname: "Ensui Enterprises",
     status: "active",
-    createdAt: "2025-08-01T00:00:00Z",
-    accountType: "business",
-    accountName: "Ensui Enterprises",
-    initialDeposit: 20000,
-    companyCapital: 100000,
+    openedAt: "2025-08-01T00:00:00Z",
+    closedAt: null,
   },
 ] as const;
 
 /** @deprecated Use bankAccounts[0] — kept for backward compat during migration. */
 export const bankAccount: BankAccount = bankAccounts[0];
 
+// ─── Transaction Type Summaries (mirror backend transaction_types table) ──
+const TX_DEPOSIT: TransactionTypeSummary = { id: 1, typeCode: "deposit", affectsBalance: "credit" };
+const TX_WITHDRAWAL: TransactionTypeSummary = { id: 2, typeCode: "withdrawal", affectsBalance: "debit" };
+const TX_TRANSFER_OUT: TransactionTypeSummary = { id: 3, typeCode: "transfer_out", affectsBalance: "debit" };
+const TX_TRANSFER_IN: TransactionTypeSummary = { id: 4, typeCode: "transfer_in", affectsBalance: "credit" };
+
+const MOCK_ACCOUNT: TransactionAccountSummary = { id: 1, iban: "DC75BELT003819DZ5F57SI", nickname: "EnsuiDev" };
+const MOCK_INITIATOR: TransactionInitiator = { id: 1, discordId: "123456789012345678", discordUsername: "EnsuiDev" };
+
 export const transactions: readonly Transaction[] = [
   {
-    id: "tx-001",
-    accountId: "acc-001",
-    type: "deposit",
+    id: 1,
+    account: MOCK_ACCOUNT,
+    transactionType: TX_DEPOSIT,
+    initiatedBy: MOCK_INITIATOR,
     amount: 5000,
-    currency: siteConfig.currency.code,
+    balanceBefore: 10420.50,
+    balanceAfter: 15420.50,
     description: "Government salary",
-    status: "completed",
-    createdAt: "2026-02-21T14:30:00Z",
+    referenceId: null,
+    status: "posted",
+    transactedAt: "2026-02-21T14:30:00Z",
+    postedAt: "2026-02-21T14:30:05Z",
   },
   {
-    id: "tx-002",
-    accountId: "acc-001",
-    type: "transfer_out",
+    id: 2,
+    account: MOCK_ACCOUNT,
+    transactionType: TX_TRANSFER_OUT,
+    initiatedBy: MOCK_INITIATOR,
     amount: 1200,
-    currency: siteConfig.currency.code,
-    description: "Rent payment",
-    counterparty: "Reverie Reserve",
-    reference: "SWF-2026-00123",
-    status: "completed",
-    createdAt: "2026-02-19T09:15:00Z",
+    balanceBefore: 11620.50,
+    balanceAfter: 10420.50,
+    description: "Rent payment — Reverie Reserve",
+    referenceId: 123,
+    status: "posted",
+    transactedAt: "2026-02-19T09:15:00Z",
+    postedAt: "2026-02-19T09:15:03Z",
   },
   {
-    id: "tx-003",
-    accountId: "acc-001",
-    type: "transfer_in",
+    id: 3,
+    account: MOCK_ACCOUNT,
+    transactionType: TX_TRANSFER_IN,
+    initiatedBy: MOCK_INITIATOR,
     amount: 3200,
-    currency: siteConfig.currency.code,
+    balanceBefore: 8420.50,
+    balanceAfter: 11620.50,
     description: "Business income, MarbleCorp invoice",
-    counterparty: "First National DC",
-    reference: "SWF-2026-00118",
-    status: "completed",
-    createdAt: "2026-02-17T16:45:00Z",
+    referenceId: 118,
+    status: "posted",
+    transactedAt: "2026-02-17T16:45:00Z",
+    postedAt: "2026-02-17T16:45:02Z",
   },
   {
-    id: "tx-004",
-    accountId: "acc-001",
-    type: "withdrawal",
+    id: 4,
+    account: MOCK_ACCOUNT,
+    transactionType: TX_WITHDRAWAL,
+    initiatedBy: MOCK_INITIATOR,
     amount: 500,
-    currency: siteConfig.currency.code,
+    balanceBefore: 8920.50,
+    balanceAfter: 8420.50,
     description: "Shop purchase, building supplies",
-    status: "completed",
-    createdAt: "2026-02-15T11:00:00Z",
+    referenceId: null,
+    status: "posted",
+    transactedAt: "2026-02-15T11:00:00Z",
+    postedAt: "2026-02-15T11:00:01Z",
   },
   {
-    id: "tx-005",
-    accountId: "acc-001",
-    type: "deposit",
+    id: 5,
+    account: MOCK_ACCOUNT,
+    transactionType: TX_DEPOSIT,
+    initiatedBy: MOCK_INITIATOR,
     amount: 10000,
-    currency: siteConfig.currency.code,
+    balanceBefore: -1079.50,
+    balanceAfter: 8920.50,
     description: "Property sale proceeds",
-    status: "completed",
-    createdAt: "2026-02-13T08:20:00Z",
+    referenceId: null,
+    status: "posted",
+    transactedAt: "2026-02-13T08:20:00Z",
+    postedAt: "2026-02-13T08:20:04Z",
   },
   {
-    id: "tx-006",
-    accountId: "acc-001",
-    type: "transfer_out",
+    id: 6,
+    account: MOCK_ACCOUNT,
+    transactionType: TX_TRANSFER_OUT,
+    initiatedBy: MOCK_INITIATOR,
     amount: 750,
-    currency: siteConfig.currency.code,
+    balanceBefore: -329.50,
+    balanceAfter: -1079.50,
     description: "Utility payment, DemocracyCraft Power Co",
-    counterparty: "DC Utilities Bank",
-    reference: "SWF-2026-00099",
+    referenceId: 99,
     status: "pending",
-    createdAt: "2026-02-12T13:10:00Z",
+    transactedAt: "2026-02-12T13:10:00Z",
+    postedAt: null,
   },
   {
-    id: "tx-007",
-    accountId: "acc-001",
-    type: "deposit",
+    id: 7,
+    account: MOCK_ACCOUNT,
+    transactionType: TX_DEPOSIT,
+    initiatedBy: MOCK_INITIATOR,
     amount: 2500,
-    currency: siteConfig.currency.code,
+    balanceBefore: -2829.50,
+    balanceAfter: -329.50,
     description: "Freelance payment, SkyTrader_42",
-    status: "completed",
-    createdAt: "2026-02-10T10:00:00Z",
+    referenceId: null,
+    status: "posted",
+    transactedAt: "2026-02-10T10:00:00Z",
+    postedAt: "2026-02-10T10:00:02Z",
   },
   {
-    id: "tx-008",
-    accountId: "acc-001",
-    type: "transfer_out",
+    id: 8,
+    account: MOCK_ACCOUNT,
+    transactionType: TX_TRANSFER_OUT,
+    initiatedBy: MOCK_INITIATOR,
     amount: 300,
-    currency: siteConfig.currency.code,
+    balanceBefore: -2529.50,
+    balanceAfter: -2829.50,
     description: "Market purchase, building materials",
-    counterparty: "DC Merchants Guild",
-    reference: "SWF-2026-00085",
-    status: "completed",
-    createdAt: "2026-02-08T15:30:00Z",
+    referenceId: 85,
+    status: "posted",
+    transactedAt: "2026-02-08T15:30:00Z",
+    postedAt: "2026-02-08T15:30:01Z",
   },
   {
-    id: "tx-009",
-    accountId: "acc-001",
-    type: "transfer_in",
+    id: 9,
+    account: MOCK_ACCOUNT,
+    transactionType: TX_TRANSFER_IN,
+    initiatedBy: MOCK_INITIATOR,
     amount: 1800,
-    currency: siteConfig.currency.code,
-    description: "Tax refund",
-    counterparty: "DC Treasury",
-    reference: "SWF-2026-00072",
-    status: "completed",
-    createdAt: "2026-02-05T09:45:00Z",
+    balanceBefore: -4329.50,
+    balanceAfter: -2529.50,
+    description: "Tax refund — DC Treasury",
+    referenceId: 72,
+    status: "posted",
+    transactedAt: "2026-02-05T09:45:00Z",
+    postedAt: "2026-02-05T09:45:03Z",
   },
   {
-    id: "tx-010",
-    accountId: "acc-001",
-    type: "withdrawal",
+    id: 10,
+    account: MOCK_ACCOUNT,
+    transactionType: TX_WITHDRAWAL,
+    initiatedBy: MOCK_INITIATOR,
     amount: 150,
-    currency: siteConfig.currency.code,
+    balanceBefore: -4179.50,
+    balanceAfter: -4329.50,
     description: "Donation to DC Community Fund",
-    status: "completed",
-    createdAt: "2026-02-03T14:20:00Z",
+    referenceId: null,
+    status: "posted",
+    transactedAt: "2026-02-03T14:20:00Z",
+    postedAt: "2026-02-03T14:20:01Z",
   },
   {
-    id: "tx-011",
-    accountId: "acc-001",
-    type: "deposit",
+    id: 11,
+    account: MOCK_ACCOUNT,
+    transactionType: TX_DEPOSIT,
+    initiatedBy: MOCK_INITIATOR,
     amount: 5000,
-    currency: siteConfig.currency.code,
+    balanceBefore: -9179.50,
+    balanceAfter: -4179.50,
     description: "Government salary",
-    status: "completed",
-    createdAt: "2026-02-01T14:30:00Z",
+    referenceId: null,
+    status: "posted",
+    transactedAt: "2026-02-01T14:30:00Z",
+    postedAt: "2026-02-01T14:30:02Z",
   },
   {
-    id: "tx-012",
-    accountId: "acc-001",
-    type: "transfer_out",
+    id: 12,
+    account: MOCK_ACCOUNT,
+    transactionType: TX_TRANSFER_OUT,
+    initiatedBy: MOCK_INITIATOR,
     amount: 2000,
-    currency: siteConfig.currency.code,
+    balanceBefore: -7179.50,
+    balanceAfter: -9179.50,
     description: "Business supplies, CityMayor_DC",
-    counterparty: "First National DC",
-    reference: "SWF-2026-00055",
-    status: "completed",
-    createdAt: "2026-01-30T11:15:00Z",
+    referenceId: 55,
+    status: "posted",
+    transactedAt: "2026-01-30T11:15:00Z",
+    postedAt: "2026-01-30T11:15:04Z",
   },
   {
-    id: "tx-013",
-    accountId: "acc-001",
-    type: "transfer_in",
+    id: 13,
+    account: MOCK_ACCOUNT,
+    transactionType: TX_TRANSFER_IN,
+    initiatedBy: MOCK_INITIATOR,
     amount: 4500,
-    currency: siteConfig.currency.code,
+    balanceBefore: -11679.50,
+    balanceAfter: -7179.50,
     description: "Contract payment, city renovation project",
-    counterparty: "DC Public Works",
-    reference: "SWF-2026-00048",
-    status: "completed",
-    createdAt: "2026-01-27T16:00:00Z",
+    referenceId: 48,
+    status: "posted",
+    transactedAt: "2026-01-27T16:00:00Z",
+    postedAt: "2026-01-27T16:00:03Z",
   },
   {
-    id: "tx-014",
-    accountId: "acc-001",
-    type: "withdrawal",
+    id: 14,
+    account: MOCK_ACCOUNT,
+    transactionType: TX_WITHDRAWAL,
+    initiatedBy: MOCK_INITIATOR,
     amount: 800,
-    currency: siteConfig.currency.code,
+    balanceBefore: -11679.50,
+    balanceAfter: -11679.50,
     description: "Plot purchase payment",
+    referenceId: null,
     status: "failed",
-    createdAt: "2026-01-25T10:30:00Z",
+    transactedAt: "2026-01-25T10:30:00Z",
+    postedAt: null,
   },
   {
-    id: "tx-015",
-    accountId: "acc-001",
-    type: "deposit",
+    id: 15,
+    account: MOCK_ACCOUNT,
+    transactionType: TX_DEPOSIT,
+    initiatedBy: MOCK_INITIATOR,
     amount: 1500,
-    currency: siteConfig.currency.code,
+    balanceBefore: -13179.50,
+    balanceAfter: -11679.50,
     description: "Auction proceeds, rare items",
-    status: "completed",
-    createdAt: "2026-01-23T13:45:00Z",
+    referenceId: null,
+    status: "posted",
+    transactedAt: "2026-01-23T13:45:00Z",
+    postedAt: "2026-01-23T13:45:02Z",
   },
-] as const;
+];
 
 export const session: Session = {
   user: {
@@ -430,9 +548,9 @@ export const session: Session = {
     discordUsername: "EnsuiDev",
     discordAvatar:
       "https://cdn.discordapp.com/embed/avatars/0.png",
-    roles: ["player", "admin"],
+    roles: ["customer", "teller", "accountant", "admin"],
   },
-  activeRole: "player",
+  activeRole: "customer",
   bankId: "demo-bank-001",
   accessToken: "mock-jwt-token-for-development",
   hasAccounts: true,
@@ -446,34 +564,42 @@ export const newUserSession: Session = {
     discordUsername: "NewPlayer",
     discordAvatar:
       "https://cdn.discordapp.com/embed/avatars/1.png",
-    roles: ["player"],
+    roles: ["customer"],
   },
-  activeRole: "player",
+  activeRole: "customer",
   bankId: "demo-bank-001",
   accessToken: "mock-jwt-token-new-user",
   hasAccounts: false,
 };
 
 export const pendingTransaction: Transaction = {
-  id: "tx-pending-001",
-  accountId: "acc-001",
-  type: "transfer_out",
+  id: 9001,
+  account: MOCK_ACCOUNT,
+  transactionType: TX_TRANSFER_OUT,
+  initiatedBy: MOCK_INITIATOR,
   amount: 0,
-  currency: siteConfig.currency.code,
+  balanceBefore: 0,
+  balanceAfter: 0,
   description: "Pending transfer",
+  referenceId: null,
   status: "pending",
-  createdAt: new Date().toISOString(),
+  transactedAt: new Date().toISOString(),
+  postedAt: null,
 };
 
 export const pendingWithdrawal: Transaction = {
-  id: "tx-withdraw-001",
-  accountId: "acc-001",
-  type: "withdrawal",
+  id: 9002,
+  account: MOCK_ACCOUNT,
+  transactionType: TX_WITHDRAWAL,
+  initiatedBy: MOCK_INITIATOR,
   amount: 0,
-  currency: siteConfig.currency.code,
+  balanceBefore: 0,
+  balanceAfter: 0,
   description: "Pending withdrawal",
+  referenceId: null,
   status: "pending",
-  createdAt: new Date().toISOString(),
+  transactedAt: new Date().toISOString(),
+  postedAt: null,
 };
 
 export const bwiftHealth: import("./types").BwiftHealth = {
@@ -497,8 +623,8 @@ export function getFilteredTransactions(
 
   let filtered: readonly Transaction[] = transactions;
 
-  if (filters.type) {
-    filtered = filtered.filter((tx) => tx.type === filters.type);
+  if (filters.transactionType) {
+    filtered = filtered.filter((tx) => tx.transactionType.typeCode === filters.transactionType);
   }
   if (filters.status) {
     filtered = filtered.filter((tx) => tx.status === filters.status);
@@ -511,13 +637,85 @@ export function getFilteredTransactions(
   return { data, total, page, pageSize };
 }
 
+// ─── Default Module Templates ─────────────────────────────────
+// Used by the setup wizard to generate a functional landing page
+// with the bank's name injected into module content.
+
+/**
+ * Generate default landing page modules for a newly configured bank.
+ * Creates hero + features + footer with the bank name woven in.
+ */
+export function defaultModules(bankName: string): ModuleInstance[] {
+  return [
+    {
+      id: "mod-hero",
+      type: "hero",
+      visible: true,
+      config: {
+        headline: `Welcome to ${bankName}`,
+        subheadline:
+          "Secure deposits, instant transfers, and full transparency. Your finances, modernized.",
+        ctaText: "Get Started with Discord",
+        ctaLink: "/login",
+        showDashboardPreview: true,
+        backgroundVariant: "gradient",
+        alignment: "center",
+      },
+    },
+    {
+      id: "mod-features",
+      type: "features",
+      visible: true,
+      config: {
+        heading: "Everything you need. Nothing you don't.",
+        subheading: "Built from the ground up for the DemocracyCraft economy.",
+        features: [
+          {
+            title: "Instant Transfers",
+            description:
+              "Send funds to any bank in the network instantly via the BWIFT system.",
+            icon: "Zap",
+          },
+          {
+            title: "Real-Time Balance",
+            description:
+              "See your balance update the moment a transaction completes. No waiting.",
+            icon: "Activity",
+          },
+          {
+            title: "Secure by Design",
+            description:
+              "Discord SSO authentication ensures only you can access your account.",
+            icon: "Shield",
+          },
+        ],
+        layout: "grid-3",
+      },
+    },
+    {
+      id: "mod-footer",
+      type: "footer",
+      visible: true,
+      config: {
+        brandName: bankName,
+        tagline: `Modern banking powered by ${bankName}`,
+        copyrightYear: new Date().getFullYear().toString(),
+        links: [
+          { label: "Privacy Policy", url: "/privacy" },
+          { label: "Terms of Service", url: "/terms" },
+        ],
+      },
+    },
+  ];
+}
+
 // ─── Admin Data ──────────────────────────────────────────────
 
 export const bank: Bank = {
   id: "demo-bank-001",
-  name: "Reveille National Bank",
-  slug: "reveille",
-  bankCode: "RVNB",
+  name: "Beloitte Banking",
+  slug: "beloitte",
+  bankCode: "BELT",
   status: "active",
   createdAt: "2025-01-01T00:00:00Z",
 };

@@ -47,14 +47,14 @@ function computeBalanceHistory(
   const dailyChanges = new Map<string, number>();
 
   for (const tx of transactions) {
-    if (tx.status !== "completed") continue;
+    if (tx.status !== "posted") continue;
 
-    const txDate = new Date(tx.createdAt);
+    const txDate = new Date(tx.transactedAt);
     const dateKey = txDate.toISOString().split("T")[0];
 
     const current = dailyChanges.get(dateKey) ?? 0;
 
-    if (tx.type === "deposit" || tx.type === "transfer_in") {
+    if (tx.transactionType.affectsBalance === "credit") {
       dailyChanges.set(dateKey, current + tx.amount);
     } else {
       dailyChanges.set(dateKey, current - tx.amount);

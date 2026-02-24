@@ -7,6 +7,8 @@ import { BrowserRouter } from "react-router";
 import { App } from "./App";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { SetupGuard } from "@/components/setup/setup-guard";
+import { ManifestInjector } from "@/components/manifest-injector";
 import "./index.css";
 
 // Side-effect import: registers all landing page modules into the registry.
@@ -37,7 +39,10 @@ createRoot(rootElement).render(
         <BrowserRouter>
           <AuthProvider>
             <ErrorBoundary label="Application">
-              <App />
+              <SetupGuard>
+                <ManifestInjector />
+                <App />
+              </SetupGuard>
             </ErrorBoundary>
             <Toaster />
           </AuthProvider>

@@ -12,23 +12,29 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
 } from "lucide-react";
-import type { Transaction, TransactionType, TransactionStatus } from "@/lib/data/types";
+import type { Transaction, TransactionTypeCode, TransactionStatus } from "@/lib/data/types";
 import type { CurrencyConfig } from "@/lib/config/site-config-schema";
 import { formatCurrency } from "@/lib/config/currency-utils";
 
 // ─── Helpers ────────────────────────────────────────────────
 
-const TYPE_CONFIG: Record<TransactionType, { label: string; icon: React.ElementType; isIncome: boolean }> = {
+const TYPE_CONFIG: Record<TransactionTypeCode, { label: string; icon: React.ElementType; isIncome: boolean }> = {
   deposit: { label: "Deposit", icon: ArrowDownLeft, isIncome: true },
   withdrawal: { label: "Withdrawal", icon: ArrowUpRight, isIncome: false },
   transfer_in: { label: "Transfer In", icon: ArrowDownLeft, isIncome: true },
   transfer_out: { label: "Transfer Out", icon: ArrowUpRight, isIncome: false },
+  wire_in: { label: "Wire In", icon: ArrowDownLeft, isIncome: true },
+  wire_out: { label: "Wire Out", icon: ArrowUpRight, isIncome: false },
+  fee: { label: "Fee", icon: ArrowUpRight, isIncome: false },
+  interest: { label: "Interest", icon: ArrowDownLeft, isIncome: true },
+  adjustment: { label: "Adjustment", icon: ArrowDownLeft, isIncome: true },
 };
 
-const STATUS_VARIANT: Record<TransactionStatus, "default" | "secondary" | "destructive"> = {
-  completed: "default",
+const STATUS_VARIANT: Record<TransactionStatus, "default" | "secondary" | "destructive" | "outline"> = {
+  posted: "default",
   pending: "secondary",
   failed: "destructive",
+  reversed: "outline",
 };
 
 function formatRelativeTime(dateStr: string): string {
@@ -88,7 +94,8 @@ export function TransactionTable({
       </TableHeader>
       <TableBody>
         {transactions.map((tx) => {
-          const config = TYPE_CONFIG[tx.type];
+          const typeCode = tx.transactionType.typeCode;
+          const config = TYPE_CONFIG[typeCode];
           const Icon = config.icon;
           return (
             <TableRow key={tx.id} className="border-white/[0.06]">
@@ -99,9 +106,6 @@ export function TransactionTable({
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{tx.description}</p>
-                    {tx.counterparty && (
-                      <p className="truncate text-xs text-muted-foreground">{tx.counterparty}</p>
-                    )}
                   </div>
                 </div>
               </TableCell>
@@ -126,7 +130,7 @@ export function TransactionTable({
                 </TableCell>
               )}
               <TableCell className="text-right text-sm text-muted-foreground">
-                {compact ? formatRelativeTime(tx.createdAt) : formatDate(tx.createdAt)}
+                {compact ? formatRelativeTime(tx.transactedAt) : formatDate(tx.transactedAt)}
               </TableCell>
             </TableRow>
           );

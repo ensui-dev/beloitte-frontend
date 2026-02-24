@@ -19,7 +19,7 @@ export function DashboardTransactions(): React.ReactElement {
   const { type, status, page, setType, setStatus, setPage } = useTransactionFilterParams();
 
   const { data: txResponse, isLoading } = useTransactions(account?.id, {
-    type,
+    transactionType: type,
     status,
     page,
     pageSize: 10,

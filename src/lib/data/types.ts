@@ -6,14 +6,14 @@
 
 // ─── User & Auth ───────────────────────────────────────────────
 
-export const USER_ROLES = ["player", "admin"] as const;
+export const USER_ROLES = ["customer", "teller", "accountant", "admin"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
 export interface User {
   readonly id: string;
   readonly discordId: string;
   readonly discordUsername: string;
-  readonly discordAvatar: string;
+  readonly discordAvatar: string | null;
   readonly roles: readonly UserRole[];
 }
 
@@ -27,63 +27,170 @@ export interface Session {
 
 // ─── Banking ───────────────────────────────────────────────────
 
-export const ACCOUNT_TYPES = ["personal", "business"] as const;
-export type AccountType = (typeof ACCOUNT_TYPES)[number];
+export const ACCOUNT_CATEGORIES = ["personal", "business"] as const;
+export type AccountCategory = (typeof ACCOUNT_CATEGORIES)[number];
+
+export const ACCOUNT_TYPE_NAMES = [
+  "personal_checking",
+  "personal_savings",
+  "business_checking",
+  "business_savings",
+] as const;
+export type AccountTypeName = (typeof ACCOUNT_TYPE_NAMES)[number];
 
 export const ACCOUNT_STATUSES = ["active", "frozen", "closed"] as const;
 export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
 
-export interface BankAccount {
-  readonly id: string;
-  readonly userId: string;
-  readonly bankId: string;
-  readonly accountNumber: string;
-  readonly balance: number;
-  readonly currency: string;
-  readonly status: AccountStatus;
-  readonly createdAt: string;
-  readonly accountType: AccountType;
-  readonly accountName: string;       // in-game name (personal) or business entity name (business)
-  readonly initialDeposit: number;
-  readonly netWorth?: number;         // personal accounts only: total cash balance
-  readonly companyCapital?: number;   // business accounts only: company capital
+// ─── Nested sub-objects matching backend Account schema ──────
+
+export interface AccountCategorySummary {
+  readonly id: number;
+  readonly categoryName: AccountCategory;
 }
+
+export interface AccountTypeSummary {
+  readonly id: number;
+  readonly category: AccountCategorySummary;
+  readonly typeName: AccountTypeName;
+  readonly interestRate: number;        // Annual % (e.g. 0.03 = 3%)
+  readonly minBalance: number;
+  readonly monthlyFee: number;
+  readonly withdrawalLimitDaily: number | null;
+  readonly transferLimitDaily: number | null;
+  readonly requiresBusinessEntity: boolean;
+}
+
+export interface AccountUserSummary {
+  readonly id: number;
+  readonly discordId: string;
+  readonly discordUsername: string;
+  readonly discordAvatar: string | null;
+  readonly displayName: string | null;
+  readonly kycVerified: boolean;
+  readonly isActive: boolean;
+  readonly suspendedAt: string | null;
+  readonly suspensionReason: string | null;
+}
+
+export interface AccountBusinessSummary {
+  readonly id: number;
+  readonly businessName: string;
+  readonly businessType: string;
+  readonly docRegistered: boolean;
+  readonly registeredAt: string | null;
+  readonly isActive: boolean;
+}
+
+export const PERMISSION_LEVELS = ["view", "transact", "admin"] as const;
+export type PermissionLevel = (typeof PERMISSION_LEVELS)[number];
+
+export interface AccountAuthorizedUser {
+  readonly id: number;
+  readonly user: AccountUserSummary;
+  readonly permissionLevel: PermissionLevel;
+  readonly grantedAt: string;
+  readonly revokedAt: string | null;
+}
+
+// ─── Main Account interface (matches backend Account schema) ──
+
+export interface BankAccount {
+  readonly id: number;
+  readonly iban: string;
+  readonly accountType: AccountTypeSummary;
+  readonly user: AccountUserSummary | null;       // Set for personal accounts
+  readonly business: AccountBusinessSummary | null; // Set for business accounts
+  readonly authorizedUsers: readonly AccountAuthorizedUser[];
+  readonly balance: number;
+  readonly nickname: string | null;
+  readonly status: AccountStatus;
+  readonly openedAt: string;
+  readonly closedAt: string | null;
+}
+
+// ─── Account helpers ─────────────────────────────────────────
+
+/** Get the account category ("personal" | "business") from a nested account. */
+export function getAccountCategory(account: BankAccount): AccountCategory {
+  return account.accountType.category.categoryName;
+}
+
+/** Get a display name for an account (nickname, owner name, or IBAN suffix). */
+export function getAccountDisplayName(account: BankAccount): string {
+  if (account.nickname) return account.nickname;
+  if (account.user) return account.user.displayName ?? account.user.discordUsername;
+  if (account.business) return account.business.businessName;
+  return account.iban.slice(-8);
+}
+
+/** Check if an account is a business account. */
+export function isBusinessAccount(account: BankAccount): boolean {
+  return account.accountType.category.categoryName === "business";
+}
+
+// ─── Account creation request (matches backend CreateAccountRequest) ──
 
 export interface AccountCreationRequest {
-  readonly bankId: string;
-  readonly accountType: AccountType;
-  readonly accountName: string;
-  readonly initialDeposit: number;
-  readonly netWorth?: number;
-  readonly companyCapital?: number;
+  readonly accountType: AccountTypeName;
+  readonly businessId?: number;
+  readonly nickname?: string;
+  readonly initialDeposit?: number;
 }
 
-export const TRANSACTION_TYPES = [
+// Transaction type codes — matches backend transaction_types table
+export const TRANSACTION_TYPE_CODES = [
   "deposit",
   "withdrawal",
-  "transfer_in",
   "transfer_out",
+  "transfer_in",
+  "wire_out",
+  "wire_in",
+  "fee",
+  "interest",
+  "adjustment",
 ] as const;
-export type TransactionType = (typeof TRANSACTION_TYPES)[number];
+export type TransactionTypeCode = (typeof TRANSACTION_TYPE_CODES)[number];
 
-export const TRANSACTION_STATUSES = ["completed", "pending", "failed"] as const;
+// Transaction status — matches backend Transaction.status column
+export const TRANSACTION_STATUSES = ["pending", "posted", "reversed", "failed"] as const;
 export type TransactionStatus = (typeof TRANSACTION_STATUSES)[number];
 
+// Nested sub-objects matching backend TransactionSchema
+export interface TransactionAccountSummary {
+  readonly id: number;
+  readonly iban: string;
+  readonly nickname: string | null;
+}
+
+export interface TransactionTypeSummary {
+  readonly id: number;
+  readonly typeCode: TransactionTypeCode;
+  readonly affectsBalance: "credit" | "debit";
+}
+
+export interface TransactionInitiator {
+  readonly id: number;
+  readonly discordId: string;
+  readonly discordUsername: string;
+}
+
 export interface Transaction {
-  readonly id: string;
-  readonly accountId: string;
-  readonly type: TransactionType;
+  readonly id: number;
+  readonly account: TransactionAccountSummary;
+  readonly transactionType: TransactionTypeSummary;
+  readonly initiatedBy: TransactionInitiator;
   readonly amount: number;
-  readonly currency: string;
-  readonly description: string;
-  readonly counterparty?: string;
-  readonly reference?: string;
+  readonly balanceBefore: number;
+  readonly balanceAfter: number;
+  readonly description: string | null;
+  readonly referenceId: number | null;
   readonly status: TransactionStatus;
-  readonly createdAt: string;
+  readonly transactedAt: string;
+  readonly postedAt: string | null;
 }
 
 export interface TransferRequest {
-  readonly fromAccountId: string;
+  readonly fromAccountId: number;
   readonly toIban: string;
   readonly amount: number;
   readonly currency: string;
@@ -91,7 +198,7 @@ export interface TransferRequest {
 }
 
 export interface WithdrawRequest {
-  readonly fromAccountId: string;
+  readonly fromAccountId: number;
   readonly amount: number;
   readonly currency: string;
   readonly description?: string;
@@ -117,7 +224,7 @@ export interface BackendHealth {
 }
 
 export interface TransactionFilters {
-  readonly type?: TransactionType;
+  readonly transactionType?: TransactionTypeCode;
   readonly status?: TransactionStatus;
   readonly page?: number;
   readonly pageSize?: number;
