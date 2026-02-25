@@ -257,17 +257,25 @@ export function TransferForm({ accountId, currency, balance, compact = false, on
       {/* Recipient IBAN */}
       <div className="space-y-2">
         <Label htmlFor="iban">Recipient IBAN</Label>
-        <Input
-          ref={ibanRef}
-          id="iban"
-          placeholder="DC00 XXXX 0000 XXXX XXXX XX"
-          value={ibanRaw}
-          onChange={handleIbanChange}
-          className="border-white/[0.06] bg-white/[0.02] font-mono tracking-wider"
-          aria-invalid={!!errors.toIban}
-          autoComplete="off"
-          spellCheck={false}
-        />
+        <div className="relative">
+          {/* Ghost text — persistent IBAN template visible behind input */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 flex items-center px-3 font-mono text-sm tracking-wider text-muted-foreground/30"
+          >
+            DC00 XXXX 0000 XXXX XXXX XX
+          </div>
+          <Input
+            ref={ibanRef}
+            id="iban"
+            value={ibanRaw}
+            onChange={handleIbanChange}
+            className="relative border-white/[0.06] bg-transparent font-mono tracking-wider"
+            aria-invalid={!!errors.toIban}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </div>
         {errors.toIban && (
           <p className="text-xs text-destructive">{errors.toIban}</p>
         )}

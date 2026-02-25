@@ -322,49 +322,55 @@ export function BankSetupWizard(): React.ReactElement {
 
   return (
     <div className="w-full">
-      {/* Progress indicator */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          {STEPS.map((s, i) => {
-            const isActive = i === currentIndex;
-            const isCompleted = i < currentIndex;
-            return (
-              <div key={s} className="flex items-center">
-                <div className="flex flex-col items-center">
-                  <div
-                    className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors ${
-                      isActive
-                        ? "bg-[oklch(0.62_0.20_255)] text-white"
-                        : isCompleted
-                          ? "bg-[oklch(0.62_0.20_255_/_0.2)] text-[oklch(0.62_0.20_255)]"
-                          : "bg-white/[0.06] text-[oklch(0.65_0.03_255)]"
-                    }`}
-                  >
-                    {i + 1}
-                  </div>
-                  <span
-                    className={`mt-1.5 text-[10px] font-medium ${
-                      isActive
-                        ? "text-[oklch(0.985_0_0)]"
-                        : "text-[oklch(0.65_0.03_255)]"
-                    }`}
-                  >
-                    {STEP_LABELS[s]}
-                  </span>
+      {/* Progress indicator — CSS grid ensures equal columns */}
+      <div className="relative mb-8" style={{ display: "grid", gridTemplateColumns: `repeat(${STEPS.length}, 1fr)` }}>
+        {/* Connector lines — absolute layer, vertically centered on circles (h-8 = 2rem → top 1rem) */}
+        {STEPS.slice(0, -1).map((s, i) => (
+          <div
+            key={`line-${s}`}
+            className={`pointer-events-none absolute top-[calc(1rem)] h-px ${
+              i < currentIndex
+                ? "bg-[oklch(0.62_0.20_255_/_0.3)]"
+                : "bg-white/[0.06]"
+            }`}
+            style={{
+              left: `${((i + 0.5) / STEPS.length) * 100}%`,
+              width: `${(1 / STEPS.length) * 100}%`,
+            }}
+          />
+        ))}
+        {/* Step circles + labels — one per grid cell, centered */}
+        {STEPS.map((s, i) => {
+          const isActive = i === currentIndex;
+          const isCompleted = i < currentIndex;
+          return (
+            <div key={s} className="relative flex flex-col items-center">
+              {/* Solid backdrop to mask connector lines behind inactive circles */}
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[oklch(0.14_0.01_255)]">
+                <div
+                  className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors ${
+                    isActive
+                      ? "bg-[oklch(0.62_0.20_255)] text-white"
+                      : isCompleted
+                        ? "bg-[oklch(0.62_0.20_255_/_0.2)] text-[oklch(0.62_0.20_255)]"
+                        : "bg-white/[0.06] text-[oklch(0.65_0.03_255)]"
+                  }`}
+                >
+                  {i + 1}
                 </div>
-                {i < STEPS.length - 1 && (
-                  <div
-                    className={`mx-2 h-px w-12 sm:w-20 ${
-                      isCompleted
-                        ? "bg-[oklch(0.62_0.20_255_/_0.3)]"
-                        : "bg-white/[0.06]"
-                    }`}
-                  />
-                )}
               </div>
-            );
-          })}
-        </div>
+              <span
+                className={`mt-1.5 whitespace-nowrap text-[10px] font-medium ${
+                  isActive
+                    ? "text-[oklch(0.985_0_0)]"
+                    : "text-[oklch(0.65_0.03_255)]"
+                }`}
+              >
+                {STEP_LABELS[s]}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       {/* Step content */}
