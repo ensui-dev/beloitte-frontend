@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import type { SiteConfig } from "@/lib/config/site-config-schema";
+import { useSession, useAuth } from "@/components/providers/auth-provider";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +34,9 @@ interface PublicLayoutProps {
 export function PublicLayout({ children, config }: PublicLayoutProps): React.ReactElement {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const closeMobileMenu = (): void => setMobileMenuOpen(false);
+  const session = useSession();
+  const { logout } = useAuth();
+  const isAuthenticated = session !== null;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -56,19 +60,34 @@ export function PublicLayout({ children, config }: PublicLayoutProps): React.Rea
             ))}
 
             {config?.nav.showLogin !== false && (
-              <>
-                <NavLink
-                  href="/login"
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Log in
-                </NavLink>
-                <Button asChild size="sm">
-                  <NavLink href={config?.nav.ctaLink ?? "/login"}>
-                    {config?.nav.ctaText ?? "Sign up"}
+              isAuthenticated ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void logout()}
+                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    Sign out
+                  </button>
+                  <Button asChild size="sm">
+                    <NavLink href="/dashboard">Dashboard</NavLink>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <NavLink
+                    href="/login"
+                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    Log in
                   </NavLink>
-                </Button>
-              </>
+                  <Button asChild size="sm">
+                    <NavLink href={config?.nav.ctaLink ?? "/login"}>
+                      {config?.nav.ctaText ?? "Sign up"}
+                    </NavLink>
+                  </Button>
+                </>
+              )
             )}
           </div>
 
@@ -103,22 +122,41 @@ export function PublicLayout({ children, config }: PublicLayoutProps): React.Rea
                 ))}
 
                 {config?.nav.showLogin !== false && (
-                  <>
-                    <NavLink
-                      href="/login"
-                      className="rounded-md px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                      onClick={closeMobileMenu}
-                    >
-                      Log in
-                    </NavLink>
-                    <div className="pt-3">
-                      <Button asChild className="w-full">
-                        <NavLink href={config?.nav.ctaLink ?? "/login"} onClick={closeMobileMenu}>
-                          {config?.nav.ctaText ?? "Sign up"}
-                        </NavLink>
-                      </Button>
-                    </div>
-                  </>
+                  isAuthenticated ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => { void logout(); closeMobileMenu(); }}
+                        className="rounded-md px-3 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      >
+                        Sign out
+                      </button>
+                      <div className="pt-3">
+                        <Button asChild className="w-full">
+                          <NavLink href="/dashboard" onClick={closeMobileMenu}>
+                            Dashboard
+                          </NavLink>
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <NavLink
+                        href="/login"
+                        className="rounded-md px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                        onClick={closeMobileMenu}
+                      >
+                        Log in
+                      </NavLink>
+                      <div className="pt-3">
+                        <Button asChild className="w-full">
+                          <NavLink href={config?.nav.ctaLink ?? "/login"} onClick={closeMobileMenu}>
+                            {config?.nav.ctaText ?? "Sign up"}
+                          </NavLink>
+                        </Button>
+                      </div>
+                    </>
+                  )
                 )}
               </div>
             </SheetContent>

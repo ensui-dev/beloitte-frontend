@@ -9,6 +9,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { useCallback } from "react";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useAccountContext } from "@/components/providers/account-provider";
+import { useSiteConfigContext } from "@/components/providers/site-config-provider";
 import { AccountSetupWizard } from "@/components/account/account-setup-wizard";
 import type { BankAccount } from "@/lib/data/types";
 
@@ -16,6 +17,7 @@ export function NewAccountPage(): React.ReactElement {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { selectAccount } = useAccountContext();
+  const config = useSiteConfigContext();
 
   // ?type=business pre-selects business account creation (e.g. from "For Business" CTA)
   const isBusiness = searchParams.get("type") === "business";
@@ -41,6 +43,9 @@ export function NewAccountPage(): React.ReactElement {
             : "Add another personal or business account to your profile."
         }
         initialAccountType={isBusiness ? "business" : undefined}
+        verificationChannelName={config.verificationChannelName}
+        gameBusinessName={config.gameBusinessName}
+        tosText={config.tosText}
       />
     </div>
   );

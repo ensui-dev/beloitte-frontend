@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BankIdentityCard } from "@/components/dashboard/admin/bank-identity-card";
 import { CurrencyConfigCard } from "@/components/dashboard/admin/currency-config-card";
 import { NavConfigCard } from "@/components/dashboard/admin/nav-config-card";
+import { TosConfigCard } from "@/components/dashboard/admin/tos-config-card";
 import { DangerZoneCard } from "@/components/dashboard/admin/danger-zone-card";
 
 export function AdminSettings(): React.ReactElement {
@@ -88,8 +89,12 @@ function SettingsContent({
         bank={bank}
         bankName={editor.draft.bankName}
         bankSlug={editor.draft.bankSlug}
+        gameBusinessName={editor.draft.gameBusinessName}
+        verificationChannelName={editor.draft.verificationChannelName}
         onBankNameChange={editor.updateBankName}
         onBankSlugChange={editor.updateBankSlug}
+        onGameBusinessNameChange={editor.updateGameBusinessName}
+        onVerificationChannelNameChange={editor.updateVerificationChannelName}
       />
 
       {/* Currency */}
@@ -105,6 +110,12 @@ function SettingsContent({
         onAddLink={editor.addNavLink}
         onRemoveLink={editor.removeNavLink}
         onUpdateLink={editor.updateNavLink}
+      />
+
+      {/* Terms of Service */}
+      <TosConfigCard
+        tosText={editor.draft.tosText}
+        onTosTextChange={editor.updateTosText}
       />
 
       {/* Danger Zone */}

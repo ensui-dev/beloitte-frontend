@@ -11,7 +11,7 @@
 import { apiClient } from "./api-client";
 import * as mockData from "./mock-data";
 import type { SiteConfig } from "@/lib/config/site-config-schema";
-import type { AccountCreationRequest, ActivityEvent, AdminStats, BackendHealth, Bank, BankAccount, BwiftHealth, PaginatedResponse, Session, Transaction, TransactionFilters, TransferRequest, VolumeDataPoint, WithdrawRequest } from "./types";
+import type { AccountCreationRequest, AccountSearchFilters, ActivityEvent, AdminStats, BackendHealth, Bank, BankAccount, BankWideTransactionFilters, BwiftHealth, DepositRequest, PaginatedResponse, Session, Transaction, TransactionFilters, TransferRequest, VolumeDataPoint, WithdrawRequest } from "./types";
 
 function isMockMode(): boolean {
   return import.meta.env.VITE_MOCK_MODE === "true";
@@ -182,7 +182,11 @@ function generateMockIban(): string {
 
 function getMockSession(): Session {
   const accounts = getMockAccounts();
-  return { ...mockData.session, hasAccounts: accounts.length > 0 };
+  return {
+    ...mockData.session,
+    hasAccounts: accounts.length > 0,
+    hasVerifiedAccounts: accounts.some((a) => a.status === "active"),
+  };
 }
 
 /**
@@ -253,7 +257,7 @@ export const dataService = {
     );
   },
 
-  /** Create a new account (personal or business). */
+  /** Create a new account (personal or business). Starts as pending_verification. */
   createAccount(request: AccountCreationRequest): Promise<BankAccount> {
     return fetchWithFallback(
       () => apiClient.post<BankAccount>("/accounts", request),
@@ -271,9 +275,9 @@ export const dataService = {
           user: isBusinessType ? null : mockData.mockOwner,
           business: isBusinessType ? mockData.mockBusiness : null,
           authorizedUsers: [],
-          balance: request.initialDeposit ?? 0,
+          balance: 0,
           nickname: request.nickname ?? null,
-          status: "active",
+          status: "pending_verification",
           openedAt: new Date().toISOString(),
           closedAt: null,
         };
@@ -282,6 +286,35 @@ export const dataService = {
         return newAccount;
       },
       "createAccount"
+    );
+  },
+
+  /**
+   * Verify an account's deposit. In mock mode, always succeeds and
+   * flips the account status from pending_verification to active.
+   * In production, the backend checks for a matching deposit.
+   */
+  verifyAccount(accountId: number): Promise<boolean> {
+    return fetchWithFallback(
+      async () => {
+        const result = await apiClient.post<{ verified: boolean }>(
+          `/accounts/${accountId}/verify`,
+          {}
+        );
+        return result.verified;
+      },
+      () => {
+        // Mock mode: always succeeds — update the account status in localStorage
+        const accounts = getMockAccounts();
+        const account = accounts.find((a) => a.id === accountId);
+        if (account && account.status === "pending_verification") {
+          // Mutate in place since we're about to persist
+          (account as { status: string }).status = "active";
+          setMockAccounts(accounts);
+        }
+        return true;
+      },
+      "verifyAccount"
     );
   },
 
@@ -353,21 +386,23 @@ export const dataService = {
   getSession(): Promise<Session> {
     return fetchWithFallback(
       async () => {
-        // Backend /auth/me returns everything except hasAccounts.
-        // We derive it client-side by checking if the user owns any accounts.
-        const raw = await apiClient.get<Omit<Session, "hasAccounts">>("/auth/me");
+        // Backend /auth/me returns everything except account-derived fields.
+        // We derive hasAccounts and hasVerifiedAccounts client-side.
+        const raw = await apiClient.get<Omit<Session, "hasAccounts" | "hasVerifiedAccounts">>("/auth/me");
 
         let hasAccounts = true; // safe default: don't force onboarding on failure
+        let hasVerifiedAccounts = true; // safe default: don't force verification
         try {
-          const accounts = await apiClient.get<unknown[]>("/accounts");
+          const accounts = await apiClient.get<BankAccount[]>("/accounts");
           hasAccounts = Array.isArray(accounts) && accounts.length > 0;
+          hasVerifiedAccounts = Array.isArray(accounts) && accounts.some((a) => a.status === "active");
         } catch {
           // Accounts endpoint unreachable — assume user has accounts to avoid
           // incorrectly redirecting to onboarding. The dashboard will show
           // its own error state if accounts truly can't be loaded.
         }
 
-        return { ...raw, hasAccounts };
+        return { ...raw, hasAccounts, hasVerifiedAccounts };
       },
       () => getMockSession(),
       "session"
@@ -386,7 +421,7 @@ export const dataService = {
 
   getAdminStats(): Promise<AdminStats> {
     return fetchWithFallback(
-      () => apiClient.get<AdminStats>("/admin/stats"),
+      () => apiClient.get<AdminStats>("/stats/"),
       () => mockData.adminStats,
       "adminStats"
     );
@@ -394,7 +429,7 @@ export const dataService = {
 
   getVolumeHistory(days = 30): Promise<readonly VolumeDataPoint[]> {
     return fetchWithFallback(
-      () => apiClient.get<readonly VolumeDataPoint[]>(`/admin/volume?days=${days}`),
+      () => apiClient.get<readonly VolumeDataPoint[]>(`/stats/volume?days=${days}`),
       () => mockData.volumeHistory.slice(-days),
       "volumeHistory"
     );
@@ -402,7 +437,7 @@ export const dataService = {
 
   getActivityFeed(limit = 10): Promise<readonly ActivityEvent[]> {
     return fetchWithFallback(
-      () => apiClient.get<readonly ActivityEvent[]>(`/admin/activity?limit=${limit}`),
+      () => apiClient.get<readonly ActivityEvent[]>(`/stats/activity?limit=${limit}`),
       () => mockData.activityFeed.slice(0, limit),
       "activityFeed"
     );
@@ -413,6 +448,82 @@ export const dataService = {
       () => apiClient.get<Bank>("/admin/bank"),
       () => mockData.bank,
       "bank"
+    );
+  },
+
+  // ─── Staff Operations (teller/accountant) ─────────────────────
+
+  /** Get all accounts across the bank (staff-only). */
+  getAllAccounts(filters: AccountSearchFilters = {}): Promise<PaginatedResponse<BankAccount>> {
+    const params = new URLSearchParams();
+    if (filters.query) params.set("q", filters.query);
+    if (filters.status) params.set("status", filters.status);
+    if (filters.category) params.set("category", filters.category);
+    if (filters.page) params.set("page", String(filters.page));
+    if (filters.pageSize) params.set("page_size", String(filters.pageSize));
+    const qs = params.toString();
+
+    return fetchWithFallback(
+      () => apiClient.get<PaginatedResponse<BankAccount>>(`/admin/accounts${qs ? `?${qs}` : ""}`),
+      () => mockData.getFilteredAccounts(filters),
+      "allAccounts"
+    );
+  },
+
+  /** Get bank-wide transactions across all accounts (staff-only). */
+  getAllTransactions(filters: BankWideTransactionFilters = {}): Promise<PaginatedResponse<Transaction>> {
+    const params = new URLSearchParams();
+    if (filters.query) params.set("q", filters.query);
+    if (filters.transactionType) params.set("transaction_type", filters.transactionType);
+    if (filters.status) params.set("status", filters.status);
+    if (filters.page) params.set("page", String(filters.page));
+    if (filters.pageSize) params.set("page_size", String(filters.pageSize));
+    const qs = params.toString();
+
+    return fetchWithFallback(
+      () => apiClient.get<PaginatedResponse<Transaction>>(`/admin/transactions${qs ? `?${qs}` : ""}`),
+      () => mockData.getFilteredBankTransactions(filters),
+      "allTransactions"
+    );
+  },
+
+  /** Process a deposit into any account (teller-only). */
+  createDeposit(deposit: DepositRequest): Promise<Transaction> {
+    return fetchWithFallback(
+      () => apiClient.post<Transaction>("/deposits", deposit),
+      () => ({
+        ...mockData.pendingTransaction,
+        id: Date.now(),
+        account: { id: deposit.toAccountId, iban: "UNKNOWN", nickname: null },
+        transactionType: { id: 1, typeCode: "deposit" as const, affectsBalance: "credit" as const },
+        amount: deposit.amount,
+        description: deposit.description ?? "Teller deposit",
+        status: "posted" as const,
+        transactedAt: new Date().toISOString(),
+        postedAt: new Date().toISOString(),
+      }),
+      "createDeposit"
+    );
+  },
+
+  /** Update an account's status (freeze, unfreeze, close). Teller/admin only. */
+  updateAccountStatus(accountId: number, status: "active" | "frozen" | "closed"): Promise<BankAccount> {
+    return fetchWithFallback(
+      () => apiClient.post<BankAccount>(`/accounts/${accountId}/status`, { status }),
+      () => {
+        const accounts = getMockAccounts();
+        const account = accounts.find((a) => a.id === accountId);
+        if (account) {
+          (account as { status: string }).status = status;
+          setMockAccounts(accounts);
+          return account;
+        }
+        // Fall back to allBankAccounts (other customers' accounts in mock data)
+        const allAcct = mockData.allBankAccounts.find((a) => a.id === accountId);
+        if (allAcct) return { ...allAcct, status };
+        throw new Error(`Account ${accountId} not found`);
+      },
+      "updateAccountStatus"
     );
   },
 } as const;

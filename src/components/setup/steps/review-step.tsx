@@ -8,7 +8,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Rocket, AlertCircle, Landmark, Coins, Palette, Type, Image } from "lucide-react";
+import { Rocket, AlertCircle, Landmark, Coins, Palette, Type, Image, FileText } from "lucide-react";
 import type { SetupData, SetupBranding } from "../bank-setup-wizard";
 import type { ThemePreset } from "@/lib/theme/presets";
 import type { ThemeConfig } from "@/lib/config/site-config-schema";
@@ -115,6 +115,22 @@ export function ReviewStep({
           <p className="text-sm font-medium">{effectiveTheme.fonts.heading}</p>
           <p className="text-xs text-[oklch(0.65_0.03_255)]">
             {effectiveTheme.fonts.body}
+          </p>
+        </div>
+
+        {/* Terms of Service */}
+        <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 sm:col-span-2">
+          <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-[oklch(0.65_0.03_255)]">
+            <FileText className="h-3.5 w-3.5" />
+            Terms of Service
+          </div>
+          <p className="text-sm font-medium">
+            {data.tosText.trim().length > 0 ? "Custom ToS configured" : "Using default template"}
+          </p>
+          <p className="text-xs text-[oklch(0.65_0.03_255)]">
+            {data.tosText.trim().length > 0
+              ? `${data.tosText.trim().length.toLocaleString()} characters`
+              : "Editable later in admin settings"}
           </p>
         </div>
       </div>

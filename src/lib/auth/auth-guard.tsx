@@ -52,8 +52,11 @@ export function AuthGuard({ requiredRole }: AuthGuardProps): React.ReactElement 
   // At this point, state.status === "authenticated"
 
   // New users without accounts must complete onboarding first.
+  // Users with unverified accounts (pending_verification) also go to onboarding
+  // where the verification screen is shown.
   // Allow access to /onboarding itself to avoid a redirect loop.
-  if (!state.session.hasAccounts && location.pathname !== "/onboarding") {
+  const needsOnboarding = !state.session.hasAccounts || !state.session.hasVerifiedAccounts;
+  if (needsOnboarding && location.pathname !== "/onboarding") {
     return <Navigate to="/onboarding" replace />;
   }
 

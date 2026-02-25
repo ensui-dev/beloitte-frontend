@@ -42,6 +42,7 @@ export function DangerZoneCard(): React.ReactElement {
       localStorage.removeItem("beloitte:mock-accounts");
       localStorage.removeItem("beloitte:mock-version");
       localStorage.removeItem("beloitte:auth-intent");
+      localStorage.removeItem("beloitte_auth_token");
       toast.success("Mock data cleared. Reloading...");
       setTimeout(() => window.location.reload(), 500);
     } catch {

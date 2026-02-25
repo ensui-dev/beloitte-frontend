@@ -11,8 +11,12 @@ interface BankIdentityCardProps {
   readonly bank: Bank | undefined;
   readonly bankName: string;
   readonly bankSlug: string;
+  readonly gameBusinessName: string;
+  readonly verificationChannelName: string;
   readonly onBankNameChange: (name: string) => void;
   readonly onBankSlugChange: (slug: string) => void;
+  readonly onGameBusinessNameChange: (name: string) => void;
+  readonly onVerificationChannelNameChange: (name: string) => void;
 }
 
 const STATUS_VARIANT: Record<BankStatus, "default" | "destructive"> = {
@@ -31,8 +35,12 @@ export function BankIdentityCard({
   bank,
   bankName,
   bankSlug,
+  gameBusinessName,
+  verificationChannelName,
   onBankNameChange,
   onBankSlugChange,
+  onGameBusinessNameChange,
+  onVerificationChannelNameChange,
 }: BankIdentityCardProps): React.ReactElement {
   return (
     <Card className="border-white/[0.06] bg-white/[0.02] backdrop-blur-sm">
@@ -99,6 +107,34 @@ export function BankIdentityCard({
                 <span className="text-sm text-muted-foreground">Loading...</span>
               )}
             </div>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="game-business-name">In-Game Business Name</Label>
+            <Input
+              id="game-business-name"
+              value={gameBusinessName}
+              onChange={(e) => onGameBusinessNameChange(e.target.value)}
+              placeholder="e.g. Beloitte"
+            />
+            <p className="text-xs text-muted-foreground">
+              Must match the DOC-registered business entity name in-game.
+              Used in <code className="text-[11px]">/pay</code> and <code className="text-[11px]">/db deposit</code> commands.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="verification-channel">Verification Channel</Label>
+            <Input
+              id="verification-channel"
+              value={verificationChannelName}
+              onChange={(e) => onVerificationChannelNameChange(e.target.value)}
+              placeholder="e.g. #deposit-here"
+            />
+            <p className="text-xs text-muted-foreground">
+              Discord channel where users run <code className="text-[11px]">/pay</code> to verify their account.
+            </p>
           </div>
         </div>
       </CardContent>

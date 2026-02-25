@@ -35,11 +35,12 @@ export function IdentityStep({
     (e: React.ChangeEvent<HTMLInputElement>): void => {
       const bankName = e.target.value;
       onChange({
+        ...value,
         bankName,
         bankSlug: slugify(bankName),
       });
     },
-    [onChange]
+    [onChange, value]
   );
 
   const handleSlugChange = useCallback(
@@ -47,6 +48,20 @@ export function IdentityStep({
       // Allow manual override — only permit URL-safe chars
       const raw = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
       onChange({ ...value, bankSlug: raw });
+    },
+    [onChange, value]
+  );
+
+  const handleGameBusinessNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      onChange({ ...value, gameBusinessName: e.target.value });
+    },
+    [onChange, value]
+  );
+
+  const handleVerificationChannelChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      onChange({ ...value, verificationChannelName: e.target.value });
     },
     [onChange, value]
   );
@@ -94,6 +109,37 @@ export function IdentityStep({
           />
           <p className="text-xs text-[oklch(0.65_0.03_255)]">
             Used in URLs and identifiers. Auto-generated from the name.
+          </p>
+        </div>
+
+        {/* In-Game Business Name */}
+        <div className="space-y-2">
+          <Label htmlFor="game-business-name">In-Game Business Name</Label>
+          <Input
+            id="game-business-name"
+            value={value.gameBusinessName}
+            onChange={handleGameBusinessNameChange}
+            placeholder="e.g. Beloitte"
+            className="border-white/[0.08] bg-white/[0.04]"
+          />
+          <p className="text-xs text-[oklch(0.65_0.03_255)]">
+            Must match the DOC-registered business entity name in-game.
+            Used in <code className="text-[10px]">/pay</code> and <code className="text-[10px]">/db deposit</code> commands.
+          </p>
+        </div>
+
+        {/* Verification Channel */}
+        <div className="space-y-2">
+          <Label htmlFor="verification-channel">Verification Channel</Label>
+          <Input
+            id="verification-channel"
+            value={value.verificationChannelName}
+            onChange={handleVerificationChannelChange}
+            placeholder="e.g. #deposit-here"
+            className="border-white/[0.08] bg-white/[0.04]"
+          />
+          <p className="text-xs text-[oklch(0.65_0.03_255)]">
+            Discord channel where users run <code className="text-[10px]">/pay</code> to verify their account.
           </p>
         </div>
 

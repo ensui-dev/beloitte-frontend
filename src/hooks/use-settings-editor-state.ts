@@ -16,6 +16,9 @@ import type {
 export interface SettingsEditorDraft {
   readonly bankName: string;
   readonly bankSlug: string;
+  readonly gameBusinessName: string;
+  readonly verificationChannelName: string;
+  readonly tosText: string;
   readonly currency: CurrencyConfig;
   readonly nav: NavConfig;
 }
@@ -26,6 +29,9 @@ export interface SettingsEditorState {
 
   readonly updateBankName: (name: string) => void;
   readonly updateBankSlug: (slug: string) => void;
+  readonly updateGameBusinessName: (name: string) => void;
+  readonly updateVerificationChannelName: (name: string) => void;
+  readonly updateTosText: (text: string) => void;
   readonly updateCurrency: (patch: Partial<CurrencyConfig>) => void;
   readonly updateNav: (patch: Partial<NavConfig>) => void;
   readonly addNavLink: (link: { label: string; href: string }) => void;
@@ -39,6 +45,9 @@ function extractDraft(config: SiteConfig): SettingsEditorDraft {
   return {
     bankName: config.bankName,
     bankSlug: config.bankSlug,
+    gameBusinessName: config.gameBusinessName,
+    verificationChannelName: config.verificationChannelName,
+    tosText: config.tosText,
     currency: { ...config.currency },
     nav: {
       ...config.nav,
@@ -78,6 +87,18 @@ export function useSettingsEditorState(
 
   const updateBankSlug = useCallback((slug: string): void => {
     setDraft((prev) => ({ ...prev, bankSlug: slug }));
+  }, []);
+
+  const updateGameBusinessName = useCallback((name: string): void => {
+    setDraft((prev) => ({ ...prev, gameBusinessName: name }));
+  }, []);
+
+  const updateVerificationChannelName = useCallback((name: string): void => {
+    setDraft((prev) => ({ ...prev, verificationChannelName: name }));
+  }, []);
+
+  const updateTosText = useCallback((text: string): void => {
+    setDraft((prev) => ({ ...prev, tosText: text }));
   }, []);
 
   const updateCurrency = useCallback((patch: Partial<CurrencyConfig>): void => {
@@ -136,6 +157,9 @@ export function useSettingsEditorState(
       ...serverConfig,
       bankName: draft.bankName,
       bankSlug: draft.bankSlug,
+      gameBusinessName: draft.gameBusinessName,
+      verificationChannelName: draft.verificationChannelName,
+      tosText: draft.tosText,
       currency: draft.currency,
       nav: draft.nav,
     };
@@ -146,6 +170,9 @@ export function useSettingsEditorState(
     hasUnsavedChanges,
     updateBankName,
     updateBankSlug,
+    updateGameBusinessName,
+    updateVerificationChannelName,
+    updateTosText,
     updateCurrency,
     updateNav,
     addNavLink,

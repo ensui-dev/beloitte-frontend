@@ -4,6 +4,7 @@ import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DashboardTopbar } from "@/components/dashboard/dashboard-topbar";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { AccountProvider } from "@/components/providers/account-provider";
+import { SiteConfigProvider } from "@/components/providers/site-config-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { useSiteConfig } from "@/hooks/use-site-config";
 
@@ -33,5 +34,9 @@ export function DashboardLayout(): React.ReactElement {
   // render with CSS defaults — ThemeProvider will apply once data arrives.
   if (!config) return content;
 
-  return <ThemeProvider theme={config.theme}>{content}</ThemeProvider>;
+  return (
+    <SiteConfigProvider config={config}>
+      <ThemeProvider theme={config.theme}>{content}</ThemeProvider>
+    </SiteConfigProvider>
+  );
 }

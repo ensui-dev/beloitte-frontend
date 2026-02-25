@@ -5,7 +5,8 @@
  *   1. Identity  — bank name + slug
  *   2. Currency  — code, name, symbol, position
  *   3. Theme     — preset picker + accent hue slider + font selector
- *   4. Review    — summary + optional branding + launch
+ *   4. ToS       — paste/edit Terms of Service text
+ *   5. Review    — summary + optional branding + launch
  *
  * Collects all data in a single state object, then builds a complete
  * SiteConfig on submission with default modules generated from the
@@ -23,6 +24,7 @@ import { IdentityStep } from "./steps/identity-step";
 import { CurrencyStep } from "./steps/currency-step";
 import { ThemeStep } from "./steps/theme-step";
 import { ReviewStep } from "./steps/review-step";
+import { TosSetupStep, generateDefaultTos } from "./steps/tos-setup-step";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { SiteConfig, CurrencyConfig, ThemeConfig } from "@/lib/config/site-config-schema";
@@ -33,6 +35,8 @@ import type { ThemePreset } from "@/lib/theme/presets";
 export interface SetupIdentity {
   bankName: string;
   bankSlug: string;
+  gameBusinessName: string;
+  verificationChannelName: string;
 }
 
 export type SetupCurrency = CurrencyConfig;
@@ -55,23 +59,25 @@ export interface SetupData {
   identity: SetupIdentity;
   currency: SetupCurrency;
   theme: SetupThemeCustomization;
+  tosText: string;
   branding: SetupBranding;
 }
 
-type SetupStep = "identity" | "currency" | "theme" | "review";
+type SetupStep = "identity" | "currency" | "theme" | "tos" | "review";
 
-const STEPS: readonly SetupStep[] = ["identity", "currency", "theme", "review"];
+const STEPS: readonly SetupStep[] = ["identity", "currency", "theme", "tos", "review"];
 const STEP_LABELS: Record<SetupStep, string> = {
   identity: "Bank Identity",
   currency: "Currency",
   theme: "Theme",
+  tos: "Terms of Service",
   review: "Review & Launch",
 };
 
 // ─── Default Values ─────────────────────────────────────────
 
 const DEFAULT_DATA: SetupData = {
-  identity: { bankName: "", bankSlug: "" },
+  identity: { bankName: "", bankSlug: "", gameBusinessName: "", verificationChannelName: "#deposit-here" },
   currency: {
     code: "RED",
     name: "Redmont Dollars",
@@ -83,6 +89,7 @@ const DEFAULT_DATA: SetupData = {
     accentHue: null,
     fonts: null,
   },
+  tosText: "",
   branding: { logoUrl: "", faviconUrl: "" },
 };
 
@@ -170,7 +177,17 @@ export function BankSetupWizard(): React.ReactElement {
 
   const updateIdentity = useCallback(
     (identity: SetupIdentity): void => {
-      setData((prev) => ({ ...prev, identity }));
+      setData((prev) => {
+        // Auto-generate default ToS when bank name changes and ToS is still empty/default
+        const shouldUpdateTos =
+          prev.tosText === "" ||
+          prev.tosText === generateDefaultTos(prev.identity.bankName);
+        return {
+          ...prev,
+          identity,
+          tosText: shouldUpdateTos ? generateDefaultTos(identity.bankName) : prev.tosText,
+        };
+      });
     },
     []
   );
@@ -221,6 +238,13 @@ export function BankSetupWizard(): React.ReactElement {
     []
   );
 
+  const updateTosText = useCallback(
+    (tosText: string): void => {
+      setData((prev) => ({ ...prev, tosText }));
+    },
+    []
+  );
+
   const updateBranding = useCallback(
     (branding: SetupBranding): void => {
       setData((prev) => ({ ...prev, branding }));
@@ -232,7 +256,12 @@ export function BankSetupWizard(): React.ReactElement {
   const isStepValid = (): boolean => {
     switch (step) {
       case "identity":
-        return data.identity.bankName.trim().length > 0 && data.identity.bankSlug.trim().length > 0;
+        return (
+          data.identity.bankName.trim().length > 0 &&
+          data.identity.bankSlug.trim().length > 0 &&
+          data.identity.gameBusinessName.trim().length > 0 &&
+          data.identity.verificationChannelName.trim().length > 0
+        );
       case "currency":
         return (
           data.currency.code.trim().length > 0 &&
@@ -241,6 +270,8 @@ export function BankSetupWizard(): React.ReactElement {
         );
       case "theme":
         return data.theme.presetId.length > 0;
+      case "tos":
+        return data.tosText.trim().length > 0;
       case "review":
         return true;
       default:
@@ -272,6 +303,9 @@ export function BankSetupWizard(): React.ReactElement {
           ctaLink: "/login",
           links: [],
         },
+        verificationChannelName: data.identity.verificationChannelName.trim() || "#deposit-here",
+        gameBusinessName: data.identity.gameBusinessName.trim() || "Beloitte",
+        tosText: data.tosText.trim(),
       };
 
       await dataService.updateSiteConfig(bankId, config);
@@ -356,6 +390,13 @@ export function BankSetupWizard(): React.ReactElement {
             bodyFont={currentFonts.body}
             onHeadingFontChange={(f) => updateFonts("heading", f)}
             onBodyFontChange={(f) => updateFonts("body", f)}
+          />
+        )}
+        {step === "tos" && (
+          <TosSetupStep
+            value={data.tosText}
+            bankName={data.identity.bankName}
+            onChange={updateTosText}
           />
         )}
         {step === "review" && (

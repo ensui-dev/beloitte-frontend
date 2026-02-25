@@ -303,5 +303,15 @@ export const siteConfigSchema = z.object({
   theme: themeConfigSchema,
   branding: brandingSchema,
   nav: navConfigSchema,
+  /** Discord channel name where users run /pay to verify their account (e.g. "#deposit-here"). */
+  verificationChannelName: z.string().min(1).default("#deposit-here"),
+  /**
+   * The in-game registered business entity name used in /pay and /db deposit commands.
+   * Must match the exact business name registered with the Department of Commerce (DOC).
+   * This may differ from bankName (e.g. bankName: "Beloitte Banking", gameBusinessName: "Beloitte").
+   */
+  gameBusinessName: z.string().min(1).default("Beloitte"),
+  /** Custom Terms of Service text shown during account onboarding. Empty = use built-in default. */
+  tosText: z.string().default(""),
 });
 export type SiteConfig = z.infer<typeof siteConfigSchema>;

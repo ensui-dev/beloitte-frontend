@@ -23,6 +23,8 @@ export interface Session {
   readonly bankId: string;
   readonly accessToken: string;
   readonly hasAccounts: boolean;
+  /** True when at least one account has status "active" (passed verification). */
+  readonly hasVerifiedAccounts: boolean;
 }
 
 // ─── Banking ───────────────────────────────────────────────────
@@ -38,7 +40,7 @@ export const ACCOUNT_TYPE_NAMES = [
 ] as const;
 export type AccountTypeName = (typeof ACCOUNT_TYPE_NAMES)[number];
 
-export const ACCOUNT_STATUSES = ["active", "frozen", "closed"] as const;
+export const ACCOUNT_STATUSES = ["active", "frozen", "closed", "pending_verification"] as const;
 export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
 
 // ─── Nested sub-objects matching backend Account schema ──────
@@ -134,7 +136,6 @@ export interface AccountCreationRequest {
   readonly accountType: AccountTypeName;
   readonly businessId?: number;
   readonly nickname?: string;
-  readonly initialDeposit?: number;
 }
 
 // Transaction type codes — matches backend transaction_types table
@@ -202,6 +203,31 @@ export interface WithdrawRequest {
   readonly amount: number;
   readonly currency: string;
   readonly description?: string;
+}
+
+// ─── Staff Operations (teller/accountant) ─────────────────────
+
+export interface DepositRequest {
+  readonly toAccountId: number;
+  readonly amount: number;
+  readonly currency: string;
+  readonly description?: string;
+}
+
+export interface AccountSearchFilters {
+  readonly query?: string;  // IBAN, name, or username search
+  readonly status?: AccountStatus;
+  readonly category?: AccountCategory;
+  readonly page?: number;
+  readonly pageSize?: number;
+}
+
+export interface BankWideTransactionFilters {
+  readonly query?: string;  // description or IBAN search
+  readonly transactionType?: TransactionTypeCode;
+  readonly status?: TransactionStatus;
+  readonly page?: number;
+  readonly pageSize?: number;
 }
 
 // ─── BWIFT Network ────────────────────────────────────────────

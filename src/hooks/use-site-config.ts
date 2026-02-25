@@ -14,6 +14,9 @@ export function useSiteConfig() {
   return useQuery({
     queryKey: SITE_CONFIG_KEY,
     queryFn: () => dataService.getSiteConfig(BANK_ID),
+    // No retry — if config doesn't exist (setup required), retrying won't help.
+    // Without this, there's a ~7s delay before SetupGuard shows the wizard.
+    retry: false,
   });
 }
 

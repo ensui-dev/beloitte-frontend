@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -41,6 +41,41 @@ function extractBankCode(iban: string): string {
   return stripIban(iban).slice(4, 8);
 }
 
+/**
+ * Validate BWIFT IBAN check digits using ISO 13616 mod-97-10.
+ *
+ * 1. Rearrange: move the first 4 chars (country + check) to the end
+ * 2. Convert letters → numbers (A=10 ... Z=35)
+ * 3. Compute mod 97 — a valid IBAN always gives remainder 1
+ */
+function validateIbanChecksum(iban: string): boolean {
+  const clean = stripIban(iban);
+  if (clean.length !== BWIFT_IBAN_LENGTH) return false;
+  if (!BWIFT_IBAN_REGEX.test(clean)) return false;
+
+  // Rearrange: bank code + account + country code + check digits
+  const rearranged = clean.slice(4) + clean.slice(0, 4);
+
+  // Convert letters to their numeric equivalents
+  let numericStr = "";
+  for (const ch of rearranged) {
+    const code = ch.charCodeAt(0);
+    if (code >= 65 && code <= 90) {
+      numericStr += String(code - 55); // A=10, B=11, ...
+    } else {
+      numericStr += ch;
+    }
+  }
+
+  // Compute mod 97 in chunks to avoid BigInt overhead
+  let remainder = 0;
+  for (const digit of numericStr) {
+    remainder = (remainder * 10 + Number(digit)) % 97;
+  }
+
+  return remainder === 1;
+}
+
 // ─── Validation Schema ──────────────────────────────────────
 
 const transferSchema = z.object({
@@ -53,6 +88,7 @@ const transferSchema = z.object({
         .string()
         .length(BWIFT_IBAN_LENGTH, `IBAN must be exactly ${BWIFT_IBAN_LENGTH} characters`)
         .regex(BWIFT_IBAN_REGEX, "Invalid BWIFT IBAN format")
+        .refine(validateIbanChecksum, "Invalid IBAN - check digits do not match")
     ),
   amount: z
     .number({ message: "Amount must be a number" })
@@ -101,17 +137,43 @@ export function TransferForm({ accountId, currency, balance, compact = false, on
 
   // Derive parsed state from raw input
   const cleanIban = stripIban(ibanRaw);
-  const ibanValid = BWIFT_IBAN_REGEX.test(cleanIban);
-  const parsedBankCode = ibanValid ? extractBankCode(cleanIban) : null;
+  const ibanFormatValid = BWIFT_IBAN_REGEX.test(cleanIban);
+  const ibanChecksumValid = ibanFormatValid && validateIbanChecksum(cleanIban);
+  const parsedBankCode = ibanChecksumValid ? extractBankCode(cleanIban) : null;
+
+  const ibanRef = useRef<HTMLInputElement>(null);
 
   const handleIbanChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const raw = e.target.value;
+    const input = e.target;
+    const raw = input.value;
+    const cursorPos = input.selectionStart ?? raw.length;
+
     // Allow only alphanumeric and spaces, cap at IBAN length + spaces
     const filtered = raw.replace(/[^a-zA-Z0-9\s]/g, "");
     const clean = stripIban(filtered);
-    if (clean.length <= BWIFT_IBAN_LENGTH) {
-      setIbanRaw(formatIban(clean));
+    if (clean.length > BWIFT_IBAN_LENGTH) return;
+
+    // Count how many "real" (non-space) characters are before the cursor
+    let realCharsBefore = 0;
+    for (let i = 0; i < cursorPos && i < raw.length; i++) {
+      if (raw[i] !== " ") realCharsBefore++;
     }
+
+    const formatted = formatIban(clean);
+    setIbanRaw(formatted);
+
+    // Map the real-char count back to a position in the formatted string
+    let newCursor = 0;
+    let counted = 0;
+    while (counted < realCharsBefore && newCursor < formatted.length) {
+      if (formatted[newCursor] !== " ") counted++;
+      newCursor++;
+    }
+
+    // Restore cursor on next frame (after React commits the value)
+    requestAnimationFrame(() => {
+      ibanRef.current?.setSelectionRange(newCursor, newCursor);
+    });
   };
 
   const handleSubmit = (e: React.FormEvent): void => {
@@ -196,6 +258,7 @@ export function TransferForm({ accountId, currency, balance, compact = false, on
       <div className="space-y-2">
         <Label htmlFor="iban">Recipient IBAN</Label>
         <Input
+          ref={ibanRef}
           id="iban"
           placeholder="DC00 XXXX 0000 XXXX XXXX XX"
           value={ibanRaw}
@@ -207,6 +270,12 @@ export function TransferForm({ accountId, currency, balance, compact = false, on
         />
         {errors.toIban && (
           <p className="text-xs text-destructive">{errors.toIban}</p>
+        )}
+        {!errors.toIban && ibanFormatValid && !ibanChecksumValid && (
+          <div className="flex items-center gap-1.5 text-xs text-destructive">
+            <AlertCircle className="h-3 w-3" />
+            Invalid IBAN - check digits do not match
+          </div>
         )}
         {parsedBankCode && !errors.toIban && (
           <div className="flex items-center gap-1.5 text-xs text-emerald-400">

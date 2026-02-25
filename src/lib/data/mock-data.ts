@@ -6,7 +6,7 @@
  * The data-service.ts layer ensures this by checking VITE_MOCK_MODE.
  */
 import type { ModuleInstance, SiteConfig } from "@/lib/config/site-config-schema";
-import type { AccountAuthorizedUser, AccountBusinessSummary, AccountTypeSummary, AccountUserSummary, ActivityEvent, AdminStats, Bank, BankAccount, PaginatedResponse, Session, Transaction, TransactionAccountSummary, TransactionInitiator, TransactionTypeSummary, VolumeDataPoint } from "./types";
+import type { AccountAuthorizedUser, AccountBusinessSummary, AccountSearchFilters, AccountTypeSummary, AccountUserSummary, ActivityEvent, AdminStats, Bank, BankAccount, BankWideTransactionFilters, PaginatedResponse, Session, Transaction, TransactionAccountSummary, TransactionInitiator, TransactionTypeSummary, VolumeDataPoint } from "./types";
 
 export const siteConfig: SiteConfig = {
   bankId: "demo-bank-001",
@@ -217,6 +217,9 @@ export const siteConfig: SiteConfig = {
       { label: "Business", href: "/login?intent=business" },
     ],
   },
+  verificationChannelName: "#deposit-here",
+  gameBusinessName: "Beloitte",
+  tosText: "",
 };
 
 // ─── Reusable mock sub-objects ────────────────────────────────
@@ -290,7 +293,7 @@ const mockAuthorizedUser: AccountAuthorizedUser = {
 export const bankAccounts: readonly BankAccount[] = [
   {
     id: 1,
-    iban: "DC75BELT003819DZ5F57SI",
+    iban: "DC18BELT003819DZ5F57SI",
     accountType: mockPersonalChecking,
     user: mockOwner,
     business: null,
@@ -303,7 +306,7 @@ export const bankAccounts: readonly BankAccount[] = [
   },
   {
     id: 2,
-    iban: "DC92BELT006HIRYAVR9IHR",
+    iban: "DC06BELT006HIRYAVR9IHR",
     accountType: mockBusiness_CHECKING,
     user: null,
     business: mockBusiness,
@@ -319,13 +322,131 @@ export const bankAccounts: readonly BankAccount[] = [
 /** @deprecated Use bankAccounts[0] — kept for backward compat during migration. */
 export const bankAccount: BankAccount = bankAccounts[0];
 
+// ─── Bank-wide accounts (all customers) ──────────────────────
+// Includes the current user's accounts + accounts from other customers.
+// Used by accountant (read-only) and teller (operational) views.
+
+const otherOwner1: AccountUserSummary = {
+  id: 3,
+  discordId: "111222333444555666",
+  discordUsername: "SkyTrader_42",
+  discordAvatar: null,
+  displayName: "SkyTrader",
+  kycVerified: true,
+  isActive: true,
+  suspendedAt: null,
+  suspensionReason: null,
+};
+
+const otherOwner2: AccountUserSummary = {
+  id: 4,
+  discordId: "222333444555666777",
+  discordUsername: "CityMayor_DC",
+  discordAvatar: null,
+  displayName: "Mayor Johnson",
+  kycVerified: true,
+  isActive: true,
+  suspendedAt: null,
+  suspensionReason: null,
+};
+
+const otherOwner3: AccountUserSummary = {
+  id: 5,
+  discordId: "333444555666777888",
+  discordUsername: "RedmontRose",
+  discordAvatar: null,
+  displayName: "Rose",
+  kycVerified: false,
+  isActive: true,
+  suspendedAt: null,
+  suspensionReason: null,
+};
+
+const otherBusiness: AccountBusinessSummary = {
+  id: 2,
+  businessName: "MarbleCorp Industries",
+  businessType: "corporation",
+  docRegistered: true,
+  registeredAt: "2025-03-10T00:00:00Z",
+  isActive: true,
+};
+
+export const allBankAccounts: readonly BankAccount[] = [
+  ...bankAccounts,
+  {
+    id: 3,
+    iban: "DC94BELT00R4QFGY8KUXI2",
+    accountType: mockPersonalChecking,
+    user: otherOwner1,
+    business: null,
+    authorizedUsers: [],
+    balance: 8234.75,
+    nickname: "SkyTrader Main",
+    status: "active",
+    openedAt: "2025-07-20T00:00:00Z",
+    closedAt: null,
+  },
+  {
+    id: 4,
+    iban: "DC79BELT00Y1KNTP6LVZR8",
+    accountType: mockPersonalChecking,
+    user: otherOwner2,
+    business: null,
+    authorizedUsers: [],
+    balance: 32100.00,
+    nickname: "Mayor's Account",
+    status: "active",
+    openedAt: "2025-05-01T00:00:00Z",
+    closedAt: null,
+  },
+  {
+    id: 5,
+    iban: "DC54BELT00ZWA93HMXD7F1",
+    accountType: mockBusiness_CHECKING,
+    user: null,
+    business: otherBusiness,
+    authorizedUsers: [],
+    balance: 125750.00,
+    nickname: "MarbleCorp Ops",
+    status: "active",
+    openedAt: "2025-03-15T00:00:00Z",
+    closedAt: null,
+  },
+  {
+    id: 6,
+    iban: "DC71BELT005E1P2K9NRVT4",
+    accountType: mockPersonalChecking,
+    user: otherOwner3,
+    business: null,
+    authorizedUsers: [],
+    balance: 0,
+    nickname: null,
+    status: "frozen",
+    openedAt: "2025-11-10T00:00:00Z",
+    closedAt: null,
+  },
+  {
+    id: 7,
+    iban: "DC30BELT00M8HXJC3QWUY6",
+    accountType: mockPersonalChecking,
+    user: otherOwner1,
+    business: null,
+    authorizedUsers: [],
+    balance: 1200.50,
+    nickname: "Savings",
+    status: "active",
+    openedAt: "2025-09-01T00:00:00Z",
+    closedAt: null,
+  },
+];
+
 // ─── Transaction Type Summaries (mirror backend transaction_types table) ──
 const TX_DEPOSIT: TransactionTypeSummary = { id: 1, typeCode: "deposit", affectsBalance: "credit" };
 const TX_WITHDRAWAL: TransactionTypeSummary = { id: 2, typeCode: "withdrawal", affectsBalance: "debit" };
 const TX_TRANSFER_OUT: TransactionTypeSummary = { id: 3, typeCode: "transfer_out", affectsBalance: "debit" };
 const TX_TRANSFER_IN: TransactionTypeSummary = { id: 4, typeCode: "transfer_in", affectsBalance: "credit" };
 
-const MOCK_ACCOUNT: TransactionAccountSummary = { id: 1, iban: "DC75BELT003819DZ5F57SI", nickname: "EnsuiDev" };
+const MOCK_ACCOUNT: TransactionAccountSummary = { id: 1, iban: "DC18BELT003819DZ5F57SI", nickname: "EnsuiDev" };
 const MOCK_INITIATOR: TransactionInitiator = { id: 1, discordId: "123456789012345678", discordUsername: "EnsuiDev" };
 
 export const transactions: readonly Transaction[] = [
@@ -554,6 +675,7 @@ export const session: Session = {
   bankId: "demo-bank-001",
   accessToken: "mock-jwt-token-for-development",
   hasAccounts: true,
+  hasVerifiedAccounts: true,
 };
 
 /** Session for a brand-new user who hasn't set up any accounts yet. */
@@ -634,6 +756,172 @@ export function getFilteredTransactions(
   const start = (page - 1) * pageSize;
   const data = filtered.slice(start, start + pageSize);
 
+  return { data, total, page, pageSize };
+}
+
+// ─── Bank-wide transactions (all accounts) ──────────────────
+// Merges the current user's transactions with transactions from other accounts.
+
+const ACCT_SKY: TransactionAccountSummary = { id: 3, iban: "DC94BELT00R4QFGY8KUXI2", nickname: "SkyTrader Main" };
+const ACCT_MAYOR: TransactionAccountSummary = { id: 4, iban: "DC79BELT00Y1KNTP6LVZR8", nickname: "Mayor's Account" };
+const ACCT_MARBLE: TransactionAccountSummary = { id: 5, iban: "DC54BELT00ZWA93HMXD7F1", nickname: "MarbleCorp Ops" };
+const INIT_SKY: TransactionInitiator = { id: 3, discordId: "111222333444555666", discordUsername: "SkyTrader_42" };
+const INIT_MAYOR: TransactionInitiator = { id: 4, discordId: "222333444555666777", discordUsername: "CityMayor_DC" };
+
+const otherTransactions: readonly Transaction[] = [
+  {
+    id: 101,
+    account: ACCT_SKY,
+    transactionType: TX_DEPOSIT,
+    initiatedBy: INIT_SKY,
+    amount: 2500,
+    balanceBefore: 5734.75,
+    balanceAfter: 8234.75,
+    description: "Market stall income",
+    referenceId: null,
+    status: "posted",
+    transactedAt: "2026-02-22T10:15:00Z",
+    postedAt: "2026-02-22T10:15:02Z",
+  },
+  {
+    id: 102,
+    account: ACCT_MAYOR,
+    transactionType: TX_TRANSFER_OUT,
+    initiatedBy: INIT_MAYOR,
+    amount: 5000,
+    balanceBefore: 37100.00,
+    balanceAfter: 32100.00,
+    description: "City infrastructure payment",
+    referenceId: 201,
+    status: "posted",
+    transactedAt: "2026-02-21T09:00:00Z",
+    postedAt: "2026-02-21T09:00:04Z",
+  },
+  {
+    id: 103,
+    account: ACCT_MARBLE,
+    transactionType: TX_DEPOSIT,
+    initiatedBy: INIT_SKY,
+    amount: 15000,
+    balanceBefore: 110750.00,
+    balanceAfter: 125750.00,
+    description: "Quarterly revenue deposit",
+    referenceId: null,
+    status: "posted",
+    transactedAt: "2026-02-20T14:00:00Z",
+    postedAt: "2026-02-20T14:00:01Z",
+  },
+  {
+    id: 104,
+    account: ACCT_SKY,
+    transactionType: TX_WITHDRAWAL,
+    initiatedBy: INIT_SKY,
+    amount: 400,
+    balanceBefore: 6134.75,
+    balanceAfter: 5734.75,
+    description: "Supply purchase, redwood planks",
+    referenceId: null,
+    status: "posted",
+    transactedAt: "2026-02-18T11:30:00Z",
+    postedAt: "2026-02-18T11:30:01Z",
+  },
+  {
+    id: 105,
+    account: ACCT_MAYOR,
+    transactionType: TX_DEPOSIT,
+    initiatedBy: INIT_MAYOR,
+    amount: 12000,
+    balanceBefore: 25100.00,
+    balanceAfter: 37100.00,
+    description: "Government salary",
+    referenceId: null,
+    status: "posted",
+    transactedAt: "2026-02-15T14:30:00Z",
+    postedAt: "2026-02-15T14:30:03Z",
+  },
+  {
+    id: 106,
+    account: ACCT_MARBLE,
+    transactionType: TX_TRANSFER_OUT,
+    initiatedBy: INIT_SKY,
+    amount: 8000,
+    balanceBefore: 118750.00,
+    balanceAfter: 110750.00,
+    description: "Payroll disbursement",
+    referenceId: 195,
+    status: "posted",
+    transactedAt: "2026-02-14T16:00:00Z",
+    postedAt: "2026-02-14T16:00:02Z",
+  },
+];
+
+export const allBankTransactions: readonly Transaction[] = [
+  ...transactions,
+  ...otherTransactions,
+].sort((a, b) => new Date(b.transactedAt).getTime() - new Date(a.transactedAt).getTime());
+
+/** Filter bank-wide accounts with search and pagination. */
+export function getFilteredAccounts(
+  filters: AccountSearchFilters
+): PaginatedResponse<BankAccount> {
+  const pageSize = filters.pageSize ?? 10;
+  const page = filters.page ?? 1;
+  let filtered: readonly BankAccount[] = allBankAccounts;
+
+  if (filters.query) {
+    const q = filters.query.toLowerCase();
+    filtered = filtered.filter(
+      (a) =>
+        a.iban.toLowerCase().includes(q) ||
+        (a.nickname?.toLowerCase().includes(q) ?? false) ||
+        (a.user?.discordUsername.toLowerCase().includes(q) ?? false) ||
+        (a.user?.displayName?.toLowerCase().includes(q) ?? false) ||
+        (a.business?.businessName.toLowerCase().includes(q) ?? false)
+    );
+  }
+  if (filters.status) {
+    filtered = filtered.filter((a) => a.status === filters.status);
+  }
+  if (filters.category) {
+    filtered = filtered.filter(
+      (a) => a.accountType.category.categoryName === filters.category
+    );
+  }
+
+  const total = filtered.length;
+  const start = (page - 1) * pageSize;
+  const data = filtered.slice(start, start + pageSize);
+  return { data, total, page, pageSize };
+}
+
+/** Filter bank-wide transactions with search and pagination. */
+export function getFilteredBankTransactions(
+  filters: BankWideTransactionFilters
+): PaginatedResponse<Transaction> {
+  const pageSize = filters.pageSize ?? 10;
+  const page = filters.page ?? 1;
+  let filtered: readonly Transaction[] = allBankTransactions;
+
+  if (filters.query) {
+    const q = filters.query.toLowerCase();
+    filtered = filtered.filter(
+      (tx) =>
+        (tx.description?.toLowerCase().includes(q) ?? false) ||
+        tx.account.iban.toLowerCase().includes(q) ||
+        (tx.account.nickname?.toLowerCase().includes(q) ?? false) ||
+        tx.initiatedBy.discordUsername.toLowerCase().includes(q)
+    );
+  }
+  if (filters.transactionType) {
+    filtered = filtered.filter((tx) => tx.transactionType.typeCode === filters.transactionType);
+  }
+  if (filters.status) {
+    filtered = filtered.filter((tx) => tx.status === filters.status);
+  }
+
+  const total = filtered.length;
+  const start = (page - 1) * pageSize;
+  const data = filtered.slice(start, start + pageSize);
   return { data, total, page, pageSize };
 }
 
