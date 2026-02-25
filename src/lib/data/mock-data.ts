@@ -692,6 +692,7 @@ export const newUserSession: Session = {
   bankId: "demo-bank-001",
   accessToken: "mock-jwt-token-new-user",
   hasAccounts: false,
+  hasVerifiedAccounts: false,
 };
 
 export const pendingTransaction: Transaction = {
