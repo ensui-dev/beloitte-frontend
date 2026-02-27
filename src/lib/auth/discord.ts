@@ -19,6 +19,7 @@
  */
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001/api";
+const BANK_ID = import.meta.env.VITE_BANK_ID ?? "demo-bank-001";
 
 /** localStorage key for persisting auth intent across the OAuth redirect. */
 const INTENT_KEY = "beloitte:auth-intent";
@@ -37,7 +38,7 @@ export function redirectToDiscordLogin(intent?: string): void {
   } else {
     localStorage.removeItem(INTENT_KEY);
   }
-  window.location.href = `${API_URL}/auth/discord`;
+  window.location.href = `${API_URL}/auth/discord?bank_id=${encodeURIComponent(BANK_ID)}`;
 }
 
 /**

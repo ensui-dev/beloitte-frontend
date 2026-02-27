@@ -15,6 +15,7 @@ export interface User {
   readonly discordUsername: string;
   readonly discordAvatar: string | null;
   readonly roles: readonly UserRole[];
+  readonly isSuperadmin: boolean;
 }
 
 export interface Session {
@@ -25,6 +26,29 @@ export interface Session {
   readonly hasAccounts: boolean;
   /** True when at least one account has status "active" (passed verification). */
   readonly hasVerifiedAccounts: boolean;
+}
+
+// ─── Admin User Management ────────────────────────────────────────
+
+/** User summary returned by the admin GET /users endpoint. */
+export interface AdminUserSummary {
+  readonly id: string;
+  readonly discordId: string;
+  readonly discordUsername: string;
+  readonly discordAvatar: string | null;
+  readonly displayName: string | null;
+  readonly kycVerified: boolean;
+  readonly isActive: boolean;
+  readonly suspendedAt: string | null;
+  readonly suspensionReason: string | null;
+}
+
+/** A single active role assignment returned by GET /users/:id/roles. */
+export interface AdminUserRoleAssignment {
+  readonly id: number;
+  readonly roleName: string;
+  readonly description: string | null;
+  readonly assignedAt: string;
 }
 
 // ─── Banking ───────────────────────────────────────────────────

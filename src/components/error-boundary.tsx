@@ -25,6 +25,7 @@ interface ErrorBoundaryProps {
 
 interface ErrorBoundaryState {
   readonly error: Error | null;
+  readonly componentStack: string | null;
 }
 
 export class ErrorBoundary extends Component<
@@ -33,15 +34,16 @@ export class ErrorBoundary extends Component<
 > {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { error: null };
+    this.state = { error: null, componentStack: null };
   }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     return { error };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error("[ErrorBoundary] Caught error:", error, info.componentStack);
+    this.setState({ componentStack: info.componentStack ?? null });
   }
 
   private handleReset = (): void => {
@@ -67,6 +69,11 @@ export class ErrorBoundary extends Component<
             <p className="max-w-sm text-xs text-muted-foreground">
               {this.state.error.message}
             </p>
+            {this.state.componentStack && (
+              <pre className="mt-2 max-h-40 max-w-lg overflow-auto rounded bg-black/20 p-2 text-left font-mono text-[10px] text-muted-foreground">
+                {this.state.componentStack}
+              </pre>
+            )}
           </div>
           <button
             type="button"

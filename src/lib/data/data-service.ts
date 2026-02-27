@@ -11,7 +11,7 @@
 import { apiClient } from "./api-client";
 import * as mockData from "./mock-data";
 import type { SiteConfig } from "@/lib/config/site-config-schema";
-import type { AccountCreationRequest, AccountSearchFilters, ActivityEvent, AdminStats, BackendHealth, Bank, BankAccount, BankWideTransactionFilters, BwiftHealth, DepositRequest, PaginatedResponse, Session, Transaction, TransactionFilters, TransferRequest, VolumeDataPoint, WithdrawRequest } from "./types";
+import type { AccountCreationRequest, AccountSearchFilters, ActivityEvent, AdminStats, AdminUserRoleAssignment, AdminUserSummary, BackendHealth, Bank, BankAccount, BankWideTransactionFilters, BwiftHealth, DepositRequest, PaginatedResponse, Session, Transaction, TransactionFilters, TransferRequest, VolumeDataPoint, WithdrawRequest } from "./types";
 
 function isMockMode(): boolean {
   return import.meta.env.VITE_MOCK_MODE === "true";
@@ -524,6 +524,73 @@ export const dataService = {
         throw new Error(`Account ${accountId} not found`);
       },
       "updateAccountStatus"
+    );
+  },
+
+  // ─── Admin: User Management ──────────────────────────────────
+
+  /** Paginated list of all users in this bank (admin only). */
+  getUsers(page = 1, pageSize = 20): Promise<PaginatedResponse<AdminUserSummary>> {
+    return fetchWithFallback(
+      () => apiClient.get<PaginatedResponse<AdminUserSummary>>(
+        `/users?page=${page}&page_size=${pageSize}`
+      ),
+      () => mockData.getFilteredUsers(page, pageSize),
+      "users"
+    );
+  },
+
+  /** Suspend a user (admin only). */
+  suspendUser(userId: string, reason: string): Promise<AdminUserSummary> {
+    return fetchWithFallback(
+      () => apiClient.post<AdminUserSummary>(`/users/${userId}/suspend`, { reason }),
+      () => { throw new Error("Mock suspend not supported"); },
+      "suspendUser"
+    );
+  },
+
+  /** Unsuspend a user (admin only). */
+  unsuspendUser(userId: string): Promise<AdminUserSummary> {
+    return fetchWithFallback(
+      () => apiClient.delete<AdminUserSummary>(`/users/${userId}/suspend`),
+      () => { throw new Error("Mock unsuspend not supported"); },
+      "unsuspendUser"
+    );
+  },
+
+  /** Update a user's KYC verification status (admin only). */
+  updateUserKyc(userId: string, kycVerified: boolean): Promise<AdminUserSummary> {
+    return fetchWithFallback(
+      () => apiClient.patch<AdminUserSummary>(`/users/${userId}/kyc`, { kycVerified }),
+      () => { throw new Error("Mock KYC update not supported"); },
+      "updateKyc"
+    );
+  },
+
+  /** Get active role assignments for a user (admin only). */
+  getUserRoles(userId: string): Promise<readonly AdminUserRoleAssignment[]> {
+    return fetchWithFallback(
+      () => apiClient.get<AdminUserRoleAssignment[]>(`/users/${userId}/roles`),
+      () => [],
+      "userRoles"
+    );
+  },
+
+  /** Assign a role to a user (admin only). */
+  assignUserRole(userId: string, roleName: string): Promise<AdminUserRoleAssignment> {
+    return fetchWithFallback(
+      () => apiClient.post<AdminUserRoleAssignment>(`/users/${userId}/roles`, { roleName }),
+      () => { throw new Error("Mock role assign not supported"); },
+      "assignRole"
+    );
+  },
+
+  /** Revoke a role assignment (admin only). */
+  revokeUserRole(userId: string, assignmentId: number): Promise<AdminUserRoleAssignment> {
+    return fetchWithFallback(
+      () => apiClient.delete<AdminUserRoleAssignment>(`/users/${userId}/roles/${assignmentId}`),
+      () => { throw new Error("Mock role revoke not supported"); },
+      "revokeRole"
     );
   },
 } as const;

@@ -11,8 +11,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { LogOut, ChevronsUpDown, Check } from "lucide-react";
+import { LogOut, ChevronsUpDown, Check, ShieldCheck } from "lucide-react";
 import type { UserRole } from "@/lib/data/types";
+import { getEffectiveRoles } from "@/lib/auth/roles";
 
 function getInitials(name: string): string {
   return name.slice(0, 2).toUpperCase();
@@ -41,7 +42,8 @@ export function ProfilePopover(): React.ReactElement | null {
   if (!session) return null;
 
   const { user, activeRole } = session;
-  const hasMultipleRoles = user.roles.length > 1;
+  const effectiveRoles = getEffectiveRoles(user.roles, user.isSuperadmin);
+  const hasMultipleRoles = effectiveRoles.length > 1;
 
   const handleRoleSwitch = (role: UserRole): void => {
     if (role === activeRole) return;
@@ -85,7 +87,12 @@ export function ProfilePopover(): React.ReactElement | null {
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-medium">{user.discordUsername}</div>
+            <div className="flex items-center gap-1.5 truncate text-sm font-medium">
+              {user.discordUsername}
+              {user.isSuperadmin && (
+                <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+              )}
+            </div>
             {hasMultipleRoles ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -98,7 +105,7 @@ export function ProfilePopover(): React.ReactElement | null {
                   align="start"
                   className="w-48 border-white/[0.06] bg-popover/90 backdrop-blur-xl"
                 >
-                  {user.roles.map((role) => (
+                  {effectiveRoles.map((role) => (
                     <DropdownMenuItem
                       key={role}
                       onClick={() => handleRoleSwitch(role)}

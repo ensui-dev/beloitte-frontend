@@ -54,7 +54,7 @@ export function SetupPage(): React.ReactElement {
   const isAuthenticated = state.status === "authenticated";
   const isAdmin =
     state.status === "authenticated" &&
-    state.session.user.roles.includes("admin");
+    (state.session.user.roles.includes("admin") || state.session.user.isSuperadmin);
 
   const handleMockLogin = async (): Promise<void> => {
     setMockLoading(true);

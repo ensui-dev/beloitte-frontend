@@ -14,6 +14,7 @@ import { AdminOverview } from "@/routes/dashboard/admin/overview";
 import { AdminSiteEditor } from "@/routes/dashboard/admin/site-editor";
 import { AdminTheme } from "@/routes/dashboard/admin/theme";
 import { AdminSettings } from "@/routes/dashboard/admin/settings";
+import { AdminUsers } from "@/routes/dashboard/admin/users";
 import { TellerDashboard } from "@/routes/dashboard/teller/dashboard";
 import { TellerAccountLookup } from "@/routes/dashboard/teller/lookup";
 import { TellerProcessDeposit } from "@/routes/dashboard/teller/deposit";
@@ -71,6 +72,7 @@ export function App(): React.ReactElement {
           {/* Admin routes — requires admin role */}
           <Route element={<AuthGuard requiredRole="admin" />}>
             <Route path="admin" element={<AdminOverview />} />
+            <Route path="admin/users" element={<AdminUsers />} />
             <Route path="admin/site-editor" element={<AdminSiteEditor />} />
             <Route path="admin/theme" element={<AdminTheme />} />
             <Route path="admin/settings" element={<AdminSettings />} />

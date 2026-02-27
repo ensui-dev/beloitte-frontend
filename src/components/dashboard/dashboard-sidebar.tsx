@@ -43,6 +43,7 @@ import {
   FileBarChart,
   Activity,
   Eye,
+  Users,
 } from "lucide-react";
 
 interface NavItem {
@@ -77,6 +78,7 @@ const ACCOUNTANT_NAV: readonly NavItem[] = [
 
 const ADMIN_NAV: readonly NavItem[] = [
   { label: "Overview", href: "/dashboard/admin", icon: BarChart3 },
+  { label: "Users", href: "/dashboard/admin/users", icon: Users },
   { label: "Site Editor", href: "/dashboard/admin/site-editor", icon: Globe },
   { label: "Theme", href: "/dashboard/admin/theme", icon: Palette },
   { label: "Settings", href: "/dashboard/admin/settings", icon: Settings },

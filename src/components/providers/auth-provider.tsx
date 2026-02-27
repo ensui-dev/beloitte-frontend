@@ -30,6 +30,7 @@ import {
   getStoredToken,
   setStoredToken,
 } from "@/lib/auth/session";
+import { canAccessRole } from "@/lib/auth/roles";
 
 // ─── Auth State Types ───────────────────────────────────────
 
@@ -64,6 +65,22 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/**
+ * Resolve the initial activeRole for a session.
+ * Superadmins who only have "customer" assigned default to "admin" view
+ * so they land on the admin dashboard after login.
+ */
+function resolveInitialSession(session: Session): Session {
+  if (
+    session.user.isSuperadmin &&
+    !session.user.roles.includes("admin") &&
+    session.activeRole === "customer"
+  ) {
+    return { ...session, activeRole: "admin" };
+  }
+  return session;
+}
+
 // ─── Provider ───────────────────────────────────────────────
 
 interface AuthProviderProps {
@@ -87,7 +104,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
     dataService
       .getSession()
       .then((session) => {
-        setState({ status: "authenticated", session });
+        setState({ status: "authenticated", session: resolveInitialSession(session) });
       })
       .catch(() => {
         // Token was invalid or expired — clean up
@@ -103,7 +120,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
 
     try {
       const session = await dataService.getSession();
-      setState({ status: "authenticated", session });
+      setState({ status: "authenticated", session: resolveInitialSession(session) });
     } catch {
       clearStoredToken();
       apiClient.clearToken();
@@ -127,8 +144,9 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
     setState((prev) => {
       if (prev.status !== "authenticated") return prev;
 
-      // Only allow switching to a role the user actually has
-      if (!prev.session.user.roles.includes(role)) return prev;
+      // Allow switching to assigned roles or any role for superadmins
+      const { roles, isSuperadmin } = prev.session.user;
+      if (!canAccessRole(role, roles, isSuperadmin)) return prev;
 
       return {
         status: "authenticated",
@@ -140,7 +158,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
   const refreshSession = useCallback(async (): Promise<void> => {
     try {
       const session = await dataService.getSession();
-      setState({ status: "authenticated", session });
+      setState({ status: "authenticated", session: resolveInitialSession(session) });
     } catch {
       // If refresh fails, don't disrupt the current state
     }
@@ -189,5 +207,5 @@ export function useActiveRole(): UserRole | null {
  */
 export function useIsAdmin(): boolean {
   const session = useSession();
-  return session?.user.roles.includes("admin") ?? false;
+  return (session?.user.roles.includes("admin") || session?.user.isSuperadmin) ?? false;
 }

@@ -21,6 +21,7 @@ import { Navigate, Outlet, useLocation } from "react-router";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { UserRole } from "@/lib/data/types";
+import { canAccessRole } from "@/lib/auth/roles";
 
 interface AuthGuardProps {
   /** If specified, the user must have this role active to access the route. */
@@ -60,10 +61,13 @@ export function AuthGuard({ requiredRole }: AuthGuardProps): React.ReactElement 
     return <Navigate to="/onboarding" replace />;
   }
 
-  if (requiredRole && state.session.activeRole !== requiredRole) {
-    // User is authenticated but doesn't have the required role active.
-    // Redirect to the default dashboard instead of showing a 403.
-    return <Navigate to="/dashboard" replace />;
+  if (requiredRole) {
+    const { roles, isSuperadmin } = state.session.user;
+    if (state.session.activeRole !== requiredRole && !canAccessRole(requiredRole, roles, isSuperadmin)) {
+      // User is authenticated but can't access the required role.
+      // Redirect to the default dashboard instead of showing a 403.
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return <Outlet />;

@@ -6,7 +6,7 @@
  * The data-service.ts layer ensures this by checking VITE_MOCK_MODE.
  */
 import type { ModuleInstance, SiteConfig } from "@/lib/config/site-config-schema";
-import type { AccountAuthorizedUser, AccountBusinessSummary, AccountSearchFilters, AccountTypeSummary, AccountUserSummary, ActivityEvent, AdminStats, Bank, BankAccount, BankWideTransactionFilters, PaginatedResponse, Session, Transaction, TransactionAccountSummary, TransactionInitiator, TransactionTypeSummary, VolumeDataPoint } from "./types";
+import type { AccountAuthorizedUser, AccountBusinessSummary, AccountSearchFilters, AccountTypeSummary, AccountUserSummary, ActivityEvent, AdminStats, AdminUserSummary, Bank, BankAccount, BankWideTransactionFilters, PaginatedResponse, Session, Transaction, TransactionAccountSummary, TransactionInitiator, TransactionTypeSummary, VolumeDataPoint } from "./types";
 
 export const siteConfig: SiteConfig = {
   bankId: "demo-bank-001",
@@ -670,6 +670,7 @@ export const session: Session = {
     discordAvatar:
       "https://cdn.discordapp.com/embed/avatars/0.png",
     roles: ["customer", "teller", "accountant", "admin"],
+    isSuperadmin: true,
   },
   activeRole: "customer",
   bankId: "demo-bank-001",
@@ -687,6 +688,7 @@ export const newUserSession: Session = {
     discordAvatar:
       "https://cdn.discordapp.com/embed/avatars/1.png",
     roles: ["customer"],
+    isSuperadmin: false,
   },
   activeRole: "customer",
   bankId: "demo-bank-001",
@@ -923,6 +925,77 @@ export function getFilteredBankTransactions(
   const total = filtered.length;
   const start = (page - 1) * pageSize;
   const data = filtered.slice(start, start + pageSize);
+  return { data, total, page, pageSize };
+}
+
+// ─── Admin: Mock Users ────────────────────────────────────────
+
+const mockAdminUsers: readonly AdminUserSummary[] = [
+  {
+    id: "1",
+    discordId: "123456789012345678",
+    discordUsername: "EnsuiDev",
+    discordAvatar: "https://cdn.discordapp.com/embed/avatars/0.png",
+    displayName: "Ensui",
+    kycVerified: true,
+    isActive: true,
+    suspendedAt: null,
+    suspensionReason: null,
+  },
+  {
+    id: "2",
+    discordId: "987654321098765432",
+    discordUsername: "NewPlayer",
+    discordAvatar: "https://cdn.discordapp.com/embed/avatars/1.png",
+    displayName: null,
+    kycVerified: false,
+    isActive: true,
+    suspendedAt: null,
+    suspensionReason: null,
+  },
+  {
+    id: "3",
+    discordId: "111222333444555666",
+    discordUsername: "SkyTrader_42",
+    discordAvatar: null,
+    displayName: "Sky",
+    kycVerified: true,
+    isActive: true,
+    suspendedAt: null,
+    suspensionReason: null,
+  },
+  {
+    id: "4",
+    discordId: "222333444555666777",
+    discordUsername: "CityMayor_DC",
+    discordAvatar: null,
+    displayName: "The Mayor",
+    kycVerified: true,
+    isActive: false,
+    suspendedAt: "2026-02-20T12:00:00Z",
+    suspensionReason: "Suspicious transaction activity",
+  },
+  {
+    id: "5",
+    discordId: "333444555666777888",
+    discordUsername: "RedmontRose",
+    discordAvatar: null,
+    displayName: null,
+    kycVerified: false,
+    isActive: true,
+    suspendedAt: null,
+    suspensionReason: null,
+  },
+];
+
+/** Paginated mock users for admin user management. */
+export function getFilteredUsers(
+  page: number,
+  pageSize: number
+): PaginatedResponse<AdminUserSummary> {
+  const total = mockAdminUsers.length;
+  const start = (page - 1) * pageSize;
+  const data = mockAdminUsers.slice(start, start + pageSize);
   return { data, total, page, pageSize };
 }
 
